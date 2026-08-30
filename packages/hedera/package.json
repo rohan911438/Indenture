@@ -1,0 +1,46 @@
+{
+  "name": "@indenture/hedera",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "HCS envelope schema + Node-only submit helpers (@hashgraph/sdk, gRPC over HTTP/2)",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./envelope": {
+      "types": "./dist/envelope.d.ts",
+      "import": "./dist/envelope.js",
+      "require": "./dist/envelope.cjs"
+    },
+    "./mirror": {
+      "types": "./dist/mirror.d.ts",
+      "import": "./dist/mirror.js",
+      "require": "./dist/mirror.cjs"
+    },
+    "./hcs": {
+      "types": "./dist/hcs.d.ts",
+      "import": "./dist/hcs.js",
+      "require": "./dist/hcs.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hashgraph/sdk": "^2.62.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "vitest": "^2.1.0"
+  }
+}

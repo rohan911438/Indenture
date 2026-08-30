@@ -1,0 +1,42 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+script = "script"
+solc_version = "0.8.28"
+evm_version = "cancun"          # Uniswap v4 needs transient storage
+optimizer = true
+optimizer_runs = 800
+via_ir = true
+bytecode_hash = "none"
+fs_permissions = [{ access = "read-write", path = "./deployments.json" }]
+ffi = false
+
+remappings = [
+  "forge-std/=lib/forge-std/src/",
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "@uniswap/v4-core/=lib/v4-core/",
+  "@uniswap/v4-periphery/=lib/v4-periphery/",
+  "v4-core/=lib/v4-core/src/",
+  "v4-periphery/=lib/v4-periphery/src/",
+  "solmate/=lib/v4-core/lib/solmate/",
+  "permit2/=lib/v4-periphery/lib/permit2/",
+]
+
+[profile.ci]
+verbosity = 3
+fuzz = { runs = 1000 }
+
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = true
+int_types = "long"
+
+[rpc_endpoints]
+hedera_testnet = "${HEDERA_RPC_URL}"
+anvil = "http://127.0.0.1:8545"
+
+[etherscan]
+# HashScan / Sourcify verification is configured at deploy time; no API key.

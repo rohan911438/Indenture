@@ -1,0 +1,22 @@
+{
+  "name": "@indenture/journaler",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Node service: writes Executed / BreachObserved envelopes to the journal HCS topic.",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "tick": "tsx src/index.ts --once",
+    "test": "vitest run --passWithNoTests",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@indenture/hedera": "*",
+    "viem": "^2.21.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0"
+  }
+}

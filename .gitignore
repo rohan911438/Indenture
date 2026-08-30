@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+.npm/
+
+# builds
+dist/
+build/
+out/
+.next/
+.turbo/
+
+# foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/**/dry-run/
+contracts/lib/
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+*.key
+.dev.vars
+
+# wrangler
+apps/validator/.wrangler/
+
+# misc
+.DS_Store
+*.log
+coverage/

@@ -1,0 +1,27 @@
+# The fund's mandate. Authored here, compiled to canonical JSON, hashed.
+# The hash is what the Validator, MandatePolicy, and the HCS journal agree on.
+# Covenants are integer-only so the on-chain check is a fixed-width compare.
+#
+# Compile / hash:  npm run compile -w @indenture/mandate -- mandates/fund-one.yaml
+
+version: 1
+name: Fund One
+
+# Addresses are filled from contracts/deployments.json after deploy.
+vault: "0x0000000000000000000000000000000000000000"
+quote: "0x0000000000000000000000000000000000000000"   # MockUSDC (6dp) - the cash reserve
+
+covenants:
+  maxPositionBps: 3000        # no single asset above 30% of NAV
+  minCashBps: 1000            # keep at least 10% in the quote currency
+  maxTradeNotional: "250000000000"     # 250,000 USDC (6dp) per trade
+  maxDailyNotional: "1000000000000"    # 1,000,000 USDC (6dp) rolling 24h
+
+universe:
+  - "0x0000000000000000000000000000000000000001"   # asset A
+  - "0x0000000000000000000000000000000000000002"   # asset B
+
+priceFeeds:
+  # asset -> Chainlink AggregatorV3 feed. Read by the Validator ONLY.
+  "0x0000000000000000000000000000000000000001": "0x0000000000000000000000000000000000000000"
+  "0x0000000000000000000000000000000000000002": "0x0000000000000000000000000000000000000000"

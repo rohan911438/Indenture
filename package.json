@@ -1,0 +1,27 @@
+{
+  "name": "indenture",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Compliance-enforced, AI-managed investment fund on Hedera testnet",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @indenture/receipt -w @indenture/mandate -w @indenture/hedera",
+    "typecheck": "npm run lint --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test:contracts && npm run test:ts",
+    "test:contracts": "cd contracts && forge test",
+    "test:ts": "npm run test --workspaces --if-present",
+    "contracts:build": "cd contracts && forge build",
+    "contracts:install": "cd contracts && forge install",
+    "inject": "npm run inject -w @indenture/manager --"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

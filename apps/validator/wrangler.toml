@@ -1,0 +1,18 @@
+name = "indenture-validator"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# VALIDATOR_KEY is a SECRET, never in this file:
+#   wrangler secret put VALIDATOR_KEY
+# Public, safe config only below.
+[vars]
+CHAIN_ID = "296"
+HEDERA_RPC_URL = "https://testnet.hashio.io/api"
+HEDERA_MIRROR_URL = "https://testnet.mirrornode.hedera.com/api/v1"
+
+# 10s cache for mirror-node reads (the free-tier ceiling is never reached).
+[[kv_namespaces]]
+binding = "CACHE"
+id = "REPLACE_WITH_KV_ID"
+preview_id = "REPLACE_WITH_PREVIEW_KV_ID"

@@ -1,0 +1,45 @@
+name: agent-tick
+
+# The untrusted Manager runs here. MANAGER_KEY is a low-blast-radius secret by
+# design - assume it is stolen. workflow_dispatch so it can be fired on stage
+# (cron alone is too coarse for a live demo).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      inject:
+        description: "Optional attack string to inject instead of a normal tick"
+        required: false
+        default: ""
+
+concurrency:
+  group: agent-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: tick
+        if: ${{ github.event.inputs.inject == '' }}
+        run: npm run tick -w @indenture/manager
+        env:
+          PROPOSER: ${{ vars.PROPOSER }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          MANAGER_KEY: ${{ secrets.MANAGER_KEY }}
+          VALIDATOR_URL: ${{ vars.VALIDATOR_URL }}
+          HEDERA_RPC_URL: ${{ vars.HEDERA_RPC_URL }}
+          HEDERA_MIRROR_URL: ${{ vars.HEDERA_MIRROR_URL }}
+      - name: inject
+        if: ${{ github.event.inputs.inject != '' }}
+        run: npm run inject -w @indenture/manager -- "${{ github.event.inputs.inject }}"
+        env:
+          VALIDATOR_URL: ${{ vars.VALIDATOR_URL }}

@@ -1,0 +1,31 @@
+name: journaler
+
+# Writes Executed / BreachObserved envelopes to the journal HCS topic.
+# Node-only (needs @hashgraph/sdk gRPC). workflow_dispatch for demo control.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: journaler
+  cancel-in-progress: false
+
+jobs:
+  journal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: journaler tick
+        run: npm run tick -w @indenture/journaler
+        env:
+          HEDERA_OPERATOR_ID: ${{ secrets.HEDERA_OPERATOR_ID }}
+          HEDERA_OPERATOR_KEY: ${{ secrets.HEDERA_OPERATOR_KEY }}
+          HEDERA_MIRROR_URL: ${{ vars.HEDERA_MIRROR_URL }}
+          HEDERA_RPC_URL: ${{ vars.HEDERA_RPC_URL }}
