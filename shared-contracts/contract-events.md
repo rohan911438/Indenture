@@ -37,14 +37,14 @@ string, so the event stays fixed-width and cheap.
 
 ## Scaffold status (2026-08-31)
 
-The first-commit scaffold emits near-equivalents that are being renamed to the
-canonical signatures above:
+The four canonical event **declarations** are now in the contracts:
 
-| Scaffold today | Canonical |
-|---|---|
-| `IndentureVault.TradeExecuted(bytes32 indexed poolId, int256 delta0, int256 delta1)` | `Executed(uint64 indexed nonce, bytes32 indexed poolId, int256 amount0, int256 amount1)` |
-| `MandatePolicy.Amended(bytes32 indexed mandateHash)` | `Amended(bytes32 indexed indentureHash, uint64 indexed seq)` |
-| _(none)_ | `BreachObserved`, `ComplianceRefused` — added with the covenant + compliance logic |
+| Contract | Event | Emission |
+|---|---|---|
+| `IndentureVault` | `Executed(uint64,bytes32,int256,int256)` | declaration frozen; emitted from `trade()` on build step 5 |
+| `MandatePolicy` | `Amended(bytes32,uint64)` | **live** — `amend()` bumps `mandateSeq` and emits |
+| `MandatePolicy` | `BreachObserved(uint64,bytes32,bytes32)` | declaration frozen; emitted from `afterSwap` with the covenant logic |
+| `CompliancePolicy` | `ComplianceRefused(address,bytes32)` | declaration frozen; emitted from the non-reverting rejection path on build step 4 |
 
 `IndentureVault.EmergencyExit(address indexed to)` and
 `MandatePolicy.ReceiptConsumed(address indexed vault, uint64 seq, bytes32 paramsHash)`

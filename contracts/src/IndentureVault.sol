@@ -22,7 +22,9 @@ contract IndentureVault {
     error NotPoolManager();
     error NonZeroDelta(int256 delta0, int256 delta1);
 
-    event TradeExecuted(bytes32 indexed poolId, int256 delta0, int256 delta1);
+    /// @dev canonical journal event - see shared-contracts/contract-events.md.
+    ///      `nonce` is the per-vault receipt seq that authorised the trade.
+    event Executed(uint64 indexed nonce, bytes32 indexed poolId, int256 amount0, int256 amount1);
     event EmergencyExit(address indexed to);
 
     constructor(address _owner, address _poolManager, address _manager) {

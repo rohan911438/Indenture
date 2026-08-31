@@ -21,6 +21,7 @@ contract MandatePolicy is IPolicy {
     address public validatorSigner; // pluggable: service today, Chainlink DON later
     bytes32 public domainSeparator;
     bytes32 public mandateHash;
+    uint64 public mandateSeq; // bumped on every amend(); mirrored to the journal
 
     // --- covenant parameters (fixed-width, set by amend) ---
     uint256 public maxPositionBps; // max single-asset weight, basis points
@@ -42,7 +43,9 @@ contract MandatePolicy is IPolicy {
     error CovenantTradeNotional();
     error CovenantDailyNotional();
 
-    event Amended(bytes32 indexed mandateHash);
+    /// @dev canonical journal events - see shared-contracts/contract-events.md.
+    event Amended(bytes32 indexed indentureHash, uint64 indexed seq);
+    event BreachObserved(uint64 indexed nonce, bytes32 indexed poolId, bytes32 reason);
     event ValidatorSignerSet(address indexed signer);
     event ReceiptConsumed(address indexed vault, uint64 seq, bytes32 paramsHash);
 
@@ -74,7 +77,10 @@ contract MandatePolicy is IPolicy {
         minCashBps = _minCashBps;
         maxTradeNotional = _maxTradeNotional;
         maxDailyNotional = _maxDailyNotional;
-        emit Amended(_mandateHash);
+        unchecked {
+            mandateSeq += 1;
+        }
+        emit Amended(_mandateHash, mandateSeq);
     }
 
     function beforeSwap(address sender, bytes calldata, bytes calldata params, bytes calldata hookData)

@@ -25,6 +25,11 @@ contract CompliancePolicy is IPolicy {
     error NotVerified(address account);
     error TransferNotCompliant(address from, address to, uint256 amount);
 
+    /// @dev canonical journal event - see shared-contracts/contract-events.md.
+    ///      Emitted from a non-reverting rejection path once step 4 wires the
+    ///      counterparty / amount extraction; declaration frozen here.
+    event ComplianceRefused(address indexed wouldBeHolder, bytes32 reason);
+
     constructor(IIdentityRegistry _identityRegistry, IModularCompliance _compliance) {
         identityRegistry = _identityRegistry;
         compliance = _compliance;
