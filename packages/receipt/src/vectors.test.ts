@@ -14,7 +14,14 @@ const vectorPath = fileURLToPath(
 );
 const v = JSON.parse(readFileSync(vectorPath, "utf8")) as {
   domain: { chainId: number; verifyingContract: `0x${string}` };
-  receipt: Record<string, string>;
+  receipt: {
+    mandateHash: `0x${string}`;
+    poolId: `0x${string}`;
+    paramsHash: `0x${string}`;
+    seq: string;
+    deadline: string;
+    vault: `0x${string}`;
+  };
   digest: `0x${string}`;
   signature: `0x${string}`;
   expectedSigner: `0x${string}`;
@@ -24,12 +31,12 @@ const PRIVATE_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // anvil #0
 
 const receipt: Receipt = {
-  mandateHash: v.receipt.mandateHash as `0x${string}`,
-  poolId: v.receipt.poolId as `0x${string}`,
-  paramsHash: v.receipt.paramsHash as `0x${string}`,
+  mandateHash: v.receipt.mandateHash,
+  poolId: v.receipt.poolId,
+  paramsHash: v.receipt.paramsHash,
   seq: BigInt(v.receipt.seq),
   deadline: BigInt(v.receipt.deadline),
-  vault: v.receipt.vault as `0x${string}`,
+  vault: v.receipt.vault,
 };
 
 describe("committed vector receipt-296.json", () => {
