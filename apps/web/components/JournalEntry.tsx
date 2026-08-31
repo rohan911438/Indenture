@@ -1,11 +1,12 @@
+"use client";
+
+import { useState } from "react";
 import type { JournalRow, ReceiptBody, BreachBody } from "@/lib/types";
 import { hashscanTopicMessage } from "@/lib/data";
 
 function fmtTs(unixSeconds: number): string {
   const d = new Date(unixSeconds * 1000);
-  return (
-    d.toISOString().replace("T", " ").replace(/\.\d+Z$/, "") + " UTC"
-  );
+  return d.toISOString().replace("T", " ").replace(/\.\d+Z$/, "") + " UTC";
 }
 
 function tag(row: JournalRow): { label: string; className: string } {
@@ -29,17 +30,31 @@ function detailLine(row: JournalRow): string {
   return `paramsHash ${(b.paramsHash ?? "0x").slice(0, 14)}… · nonce ${b.seq ?? "—"}`;
 }
 
+function Field({ k, v }: { k: string; v?: string | number | boolean }) {
+  if (v === undefined || v === null || v === "") return null;
+  return (
+    <>
+      <dt className="text-slate">{k}</dt>
+      <dd className="text-signal break-all">{String(v)}</dd>
+    </>
+  );
+}
+
 /**
  * One journal row. Used unchanged by /blocked and /journal — do not fork.
+ * Click the row to expand full hashes, the receipt, and the proposal params.
  * A refused/breach row with an attached CONTEXT renders the callout.
  */
 export function JournalEntry({
   row,
   topicId,
+  defaultOpen = false,
 }: {
   row: JournalRow;
   topicId: string;
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
   const t = tag(row);
   const body = row.body as ReceiptBody & BreachBody;
   const reason = row.type === "BREACH" ? body.detail : body.reason;
@@ -48,37 +63,74 @@ export function JournalEntry({
 
   return (
     <article className="py-6">
-      <div className="flex items-baseline justify-between gap-4">
-        <div className="flex items-baseline gap-3">
-          <span className="font-mono text-xs text-slate tabular-nums">
-            #{row.seq}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="group w-full text-left"
+      >
+        <div className="flex items-baseline justify-between gap-4">
+          <div className="flex items-baseline gap-3">
+            <span className="font-mono text-xs text-slate tabular-nums">
+              #{row.seq}
+            </span>
+            <span
+              className={`font-sans text-[11px] uppercase tracking-wider border px-1.5 py-0.5 ${t.className}`}
+            >
+              {t.label}
+            </span>
+          </div>
+          <time className="font-mono text-xs text-slate">{fmtTs(row.ts)}</time>
+        </div>
+
+        <p className="mt-3 font-serif text-[17px] leading-snug text-signal group-hover:text-brass transition-colors">
+          {reason}
+        </p>
+
+        <div className="mt-2 flex items-baseline justify-between gap-4">
+          <span className="font-mono text-xs text-slate break-all">
+            {detailLine(row)}
           </span>
-          <span
-            className={`font-sans text-[11px] uppercase tracking-wider border px-1.5 py-0.5 ${t.className}`}
-          >
-            {t.label}
+          <span className="font-mono text-xs text-slate whitespace-nowrap">
+            {open ? "details ▲" : "details ▼"}
           </span>
         </div>
-        <time className="font-mono text-xs text-slate">{fmtTs(row.ts)}</time>
-      </div>
+      </button>
 
-      <p className="mt-3 font-serif text-[17px] leading-snug text-signal">
-        {reason}
-      </p>
-
-      <div className="mt-2 flex items-baseline justify-between gap-4">
-        <span className="font-mono text-xs text-slate break-all">
-          {detailLine(row)}
-        </span>
-        <a
-          href={hashscanTopicMessage(topicId, row.seq)}
-          target="_blank"
-          rel="noreferrer"
-          className="font-mono text-xs text-slate hover:text-signal whitespace-nowrap"
-        >
-          HashScan ↗
-        </a>
-      </div>
+      {open && (
+        <dl className="mt-4 grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5 font-mono text-xs border-l border-hairline pl-4">
+          <Field k="vault" v={row.vault} />
+          <Field k="nonce" v={body.seq ?? body.nonce} />
+          {row.type === "RECEIPT" && (
+            <>
+              <Field k="decision" v={body.decision} />
+              <Field k="mandateHash" v={body.mandateHash} />
+              <Field k="poolId" v={body.poolId} />
+              <Field k="paramsHash" v={body.paramsHash} />
+              <Field k="signature" v={body.signature} />
+              <Field k="source" v={body.source} />
+            </>
+          )}
+          {row.type === "BREACH" && (
+            <>
+              <Field k="covenant" v={body.covenant} />
+              <Field k="tx" v={body.observedTxHash} />
+            </>
+          )}
+          <Field k="consensus" v={fmtTs(row.ts)} />
+          <dt className="text-slate">HashScan</dt>
+          <dd>
+            <a
+              href={hashscanTopicMessage(topicId, row.seq)}
+              target="_blank"
+              rel="noreferrer"
+              className="text-brass hover:underline"
+            >
+              topic message #{row.seq} ↗
+            </a>
+          </dd>
+        </dl>
+      )}
 
       {showCallout && row.context && (
         <div className="mt-4 border-l-2 border-oxblood pl-4">
@@ -97,6 +149,11 @@ export function JournalEntry({
             {row.context.proposer} · dropped at the boundary, never sent to the
             Validator
           </div>
+          {open && (
+            <div className="mt-2 font-mono text-[11px] text-slate break-all">
+              proposed: {JSON.stringify(row.context.swapParams)}
+            </div>
+          )}
         </div>
       )}
     </article>

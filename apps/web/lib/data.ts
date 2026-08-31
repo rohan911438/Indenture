@@ -11,6 +11,7 @@ import journalMock from "@/mocks/journal-entries.json";
 import blockedMock from "@/mocks/blocked-attempts.json";
 import sharesMock from "@/mocks/shares-state.json";
 import covenantStatusMock from "@/mocks/covenant-status.json";
+import attackScenariosMock from "@/mocks/attack-scenarios.json";
 import { deployments, JOURNAL_TOPIC, MANDATE_TOPIC } from "@/lib/deployments";
 import type {
   ContextBody,
@@ -125,6 +126,22 @@ export interface CovenantStatus {
 export async function getCovenantStatus(): Promise<CovenantStatus[]> {
   // TODO(real): derive current values from vault balances + the journal topic
   return covenantStatusMock as CovenantStatus[];
+}
+
+export interface AttackScenario {
+  id: string;
+  title: string;
+  proposer: "RuleProposer" | "LlmProposer";
+  poolId: string;
+  injectedReasoning: string;
+  swapParams: { zeroForOne: boolean; amountSpecified: string; sqrtPriceLimitX96: string };
+  covenant: string;
+  reason: string;
+}
+
+/** Named injections the demo console can fire. Mirrors apps/manager inject.ts. */
+export function getAttackScenarios(): AttackScenario[] {
+  return attackScenariosMock as AttackScenario[];
 }
 
 export type SharesState = typeof sharesMock;
