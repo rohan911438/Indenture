@@ -165,6 +165,18 @@ export function SharesPanel({ state }: { state: SharesState }) {
           </div>
         )}
 
+        {connected && canTransact && (
+          <div className="mt-4 border-l-2 border-brass pl-4">
+            <div className="font-mono text-[11px] uppercase tracking-wider text-brass">
+              cleared to subscribe
+            </div>
+            <p className="mt-2 font-mono text-[11px] text-slate">
+              IdentityRegistry.isVerified is true and the class is open —
+              CompliancePolicy would let this transfer through.
+            </p>
+          </div>
+        )}
+
         {note && (
           <p className="mt-4 font-mono text-xs text-brass">{note}</p>
         )}

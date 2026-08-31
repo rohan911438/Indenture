@@ -50,7 +50,7 @@ export default function RootLayout({
     >
       <body>
         <header className="border-b border-hairline">
-          <div className="mx-auto max-w-deed px-6 py-5 flex items-baseline gap-8">
+          <div className="mx-auto max-w-deed px-6 py-5 flex flex-wrap items-baseline gap-x-8 gap-y-3">
             <Link
               href="/"
               className="font-mono text-xs tracking-[0.3em] text-signal"
