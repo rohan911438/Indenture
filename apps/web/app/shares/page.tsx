@@ -1,32 +1,50 @@
-import { deployments } from "@/lib/deployments";
+import { SharesPanel } from "@/components/SharesPanel";
+import { getSharesState } from "@/lib/data";
 
-export const revalidate = 10;
+export const revalidate = 5;
 
 /**
- * The ERC-3643 share class: supply, holders, and whether the class is currently
- * FROZEN because MandatePolicy.inBreach() is true (via MandateComplianceModule).
+ * The ERC-3643 share class. Supply, holders, and — the point of the page —
+ * whether a given wallet can subscribe, with the exact refusal reason when it
+ * can't. A portfolio breach freezes the whole class.
  */
-export default async function Shares() {
-  const token = deployments.ats?.SecurityToken ?? "";
+export default async function SharesPage() {
+  const state = await getSharesState();
+  const { shareClass } = state;
+  const supply = Number(shareClass.totalSupply) / 1_000_000;
 
   return (
-    <div className="space-y-4 text-sm">
-      <h1 className="text-2xl font-bold">Shares</h1>
-      <p className="text-neutral-400">
-        ERC-3643 security token {token || "(unset)"}. A portfolio breach freezes
-        transfers and redemptions for the whole class until the mandate is back
-        in compliance.
-      </p>
-      <dl className="grid grid-cols-2 gap-2 max-w-sm">
-        <dt className="text-neutral-500">Status</dt>
-        <dd>STUB &mdash; wire to MandatePolicy.inBreach()</dd>
-        <dt className="text-neutral-500">Total supply</dt>
-        <dd>&mdash;</dd>
-        <dt className="text-neutral-500">Holders</dt>
-        <dd>&mdash;</dd>
-        <dt className="text-neutral-500">NAV / share</dt>
-        <dd>&mdash;</dd>
+    <div className="space-y-12">
+      <header>
+        <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate">
+          Shares
+        </p>
+        <h1 className="mt-4 font-serif text-[26px] leading-snug text-signal">
+          {shareClass.name} — an ERC-3643 security token. Transfers require a
+          verified identity; a mandate breach freezes the class.
+        </h1>
+      </header>
+
+      <dl className="grid grid-cols-2 gap-y-3 gap-x-8 max-w-md font-mono text-sm">
+        <dt className="text-slate">Token</dt>
+        <dd className="text-signal break-all">{shareClass.token}</dd>
+        <dt className="text-slate">Total supply</dt>
+        <dd className="text-signal tabular-nums">
+          {supply.toLocaleString("en-US")}
+        </dd>
+        <dt className="text-slate">Holders</dt>
+        <dd className="text-signal tabular-nums">{shareClass.holders}</dd>
+        <dt className="text-slate">NAV / share</dt>
+        <dd className="text-signal tabular-nums">
+          ${Number(shareClass.navPerShare).toFixed(4)}
+        </dd>
+        <dt className="text-slate">Status</dt>
+        <dd className={shareClass.frozen ? "text-oxblood" : "text-brass"}>
+          {shareClass.frozen ? "FROZEN — mandate in breach" : "open"}
+        </dd>
       </dl>
+
+      <SharesPanel state={state} />
     </div>
   );
 }
