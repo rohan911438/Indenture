@@ -10,6 +10,7 @@ import mandateMock from "@/mocks/mandate.json";
 import journalMock from "@/mocks/journal-entries.json";
 import blockedMock from "@/mocks/blocked-attempts.json";
 import sharesMock from "@/mocks/shares-state.json";
+import covenantStatusMock from "@/mocks/covenant-status.json";
 import { deployments, JOURNAL_TOPIC, MANDATE_TOPIC } from "@/lib/deployments";
 import type {
   ContextBody,
@@ -110,6 +111,20 @@ export async function getBlocked(): Promise<JournalRow[]> {
       r.type === "BREACH" ||
       (r.type === "RECEIPT" && (r.body as ReceiptBody).decision === "REFUSED"),
   );
+}
+
+export interface CovenantStatus {
+  key: string;
+  label: string;
+  current: number;
+  limit: number;
+  unit: "bps" | "usdc6";
+  mode: "ceiling" | "floor";
+}
+
+export async function getCovenantStatus(): Promise<CovenantStatus[]> {
+  // TODO(real): derive current values from vault balances + the journal topic
+  return covenantStatusMock as CovenantStatus[];
 }
 
 export type SharesState = typeof sharesMock;
