@@ -25,6 +25,9 @@ contracts/lib/
 # wrangler
 apps/validator/.wrangler/
 
+# journaler runtime cursor (committed position lives in the workflow, not the repo)
+apps/journaler/cursor.json
+
 # misc
 .DS_Store
 *.log

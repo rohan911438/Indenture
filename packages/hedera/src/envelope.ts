@@ -48,26 +48,25 @@ export const receiptBody = z
   .object({
     decision: z.enum(["APPROVED", "REFUSED"]),
     reason: z.string(), // human-readable; for REFUSED this is the whole point
-    mandateHash: z.string(),
-    poolId: z.string(),
-    paramsHash: z.string(),
-    seq: z.number().int().nonnegative(),
-    signature: z.string().optional(), // present only when APPROVED
+    // present when the receipt came from the Validator; absent when the
+    // journaler reconstructs it from an on-chain Executed / ComplianceRefused.
+    mandateHash: z.string().optional(),
+    poolId: z.string().optional(),
+    paramsHash: z.string().optional(),
+    seq: z.number().int().nonnegative().optional(),
+    signature: z.string().optional(), // present only when APPROVED (Validator path)
+    source: z.string().optional(), // e.g. "onchain:Executed"
   })
-  .strict();
+  .passthrough();
 
 export const breachBody = z
   .object({
-    covenant: z.enum([
-      "maxPositionBps",
-      "minCashBps",
-      "maxTradeNotional",
-      "maxDailyNotional",
-    ]),
+    covenant: z.string(), // a bytes32 reason tag decoded to text
     observedTxHash: z.string(),
     detail: z.string(),
+    nonce: z.number().int().nonnegative().optional(), // cross-link to the receipt seq
   })
-  .strict();
+  .passthrough();
 
 export type ReceiptBody = z.infer<typeof receiptBody>;
 export type BreachBody = z.infer<typeof breachBody>;

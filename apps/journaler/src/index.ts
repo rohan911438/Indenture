@@ -1,25 +1,29 @@
 /**
- * The journaler is the ONLY component that writes to HCS. It needs
- * @hashgraph/sdk (gRPC over HTTP/2) so it runs on Node, never on the edge.
+ * The journaler is the ONLY component that writes on-chain events to HCS. It
+ * needs @hashgraph/sdk (gRPC over HTTP/2) so it runs on Node, never the edge.
  *
- * Two triggers:
- *   - cron (journaler.yml, + workflow_dispatch for the demo)
- *   - local watch: tail the chain for the vault's Swap events
+ * One tick (see run.ts for the injectable core):
+ *   1. read the committed cursor.json
+ *   2. poll the mirror node for vault contract logs since cursor.lastTimestamp
+ *   3. decode each (Executed / BreachObserved / Amended / ComplianceRefused)
+ *   4. skip any whose (event, nonce, tx) dedupe key is already in the cursor
+ *   5. submit the HCS envelope, and ONLY THEN advance + persist the cursor
  *
- * It emits:
- *   RECEIPT  - mirrors the Validator's APPROVED/REFUSED decision (durable copy)
- *   BREACH   - when an on-chain covenant breach is observed
- *   CONTEXT  - the Manager's raw proposal + reasoning
+ * Triggers: cron (journaler.yml + workflow_dispatch) and a local watch.
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { readContractLogs } from "@indenture/hedera/mirror";
 import { hcsClient, submit } from "@indenture/hedera/hcs";
-import { makeEnvelope, type EnvelopeType } from "@indenture/hedera/envelope";
+import {
+  makeEnvelope,
+  type EnvelopeType,
+} from "@indenture/hedera/envelope";
+import { runTick, type Deployments } from "./run.js";
+import { cursorPath, loadCursor, saveCursor } from "./cursor.js";
 
-type Deployments = {
-  hcs: { journalTopicId: string; mandateTopicId: string };
-  contracts: { IndentureVault: string };
-};
+export { runTick } from "./run.js";
+export type { TickDeps, Deployments } from "./run.js";
 
 function loadDeployments(): Deployments {
   const path = resolve(process.cwd(), "../../contracts/deployments.json");
@@ -33,6 +37,7 @@ function auth() {
   return { operatorId, operatorKey, network: "testnet" as const };
 }
 
+/** Ad-hoc single-envelope submit (used by scripts / the manager fallback path). */
 export async function journal(type: EnvelopeType, body: unknown): Promise<void> {
   const dep = loadDeployments();
   if (!dep.hcs.journalTopicId) throw new Error("journalTopicId not set in deployments.json");
@@ -43,9 +48,26 @@ export async function journal(type: EnvelopeType, body: unknown): Promise<void> 
 }
 
 async function tick(): Promise<void> {
-  // TODO: query mirror node for new vault Swap events since last seq; for each,
-  //       derive whether a covenant is breached and emit RECEIPT / BREACH.
-  console.log("[journaler] tick: STUB - no new events");
+  const dep = loadDeployments();
+  if (!dep.hcs.journalTopicId || !dep.contracts.IndentureVault) {
+    console.log("[journaler] deployments.json not populated yet - dry run, no-op");
+    return;
+  }
+  const client = hcsClient(auth());
+  const stats = await runTick({
+    deployments: dep,
+    loadCursor: () => loadCursor(),
+    saveCursor: (c) => saveCursor(c),
+    fetchLogs: (id, since, mirrorUrl) =>
+      readContractLogs(id, { mirrorUrl, sinceTimestamp: since, order: "asc" }),
+    submitEnvelope: async (topicId, env) => {
+      const { sequenceNumber } = await submit(client, topicId, env);
+      return sequenceNumber;
+    },
+  });
+  console.log(
+    `[journaler] tick done: ${stats.journaled} journaled, ${stats.skipped} skipped (cursor ${cursorPath()})`,
+  );
 }
 
 if (process.argv.includes("--once")) {
