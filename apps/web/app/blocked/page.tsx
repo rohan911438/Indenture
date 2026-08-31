@@ -1,65 +1,54 @@
-import { readTopic } from "@indenture/hedera/mirror";
-import { JOURNAL_TOPIC, MIRROR_URL } from "@/lib/deployments";
+import { JournalEntry } from "@/components/JournalEntry";
+import { getBlocked, JOURNAL_TOPIC_ID, USING_MOCKS } from "@/lib/data";
 
-export const revalidate = 10; // 10s cache, matches the Validator's mirror cache
+export const revalidate = 5;
 
 /**
- * THE DEMO'S MAIN STAGE. Build this first.
- * Every REFUSED receipt + every BREACH, newest first, with the reason spelled
- * out. A blocked attack is a feature - this page is where it becomes visible.
+ * The wall. Every refusal and every on-chain breach, newest first — with the
+ * covenant that stopped it and, where one was journaled, the exact text the
+ * model saw. A blocked attack is the product, not a hidden failure.
  */
-export default async function Blocked() {
-  const messages = JOURNAL_TOPIC
-    ? await readTopic(JOURNAL_TOPIC, { mirrorUrl: MIRROR_URL, limit: 50, order: "desc" })
-    : [];
-
-  const blocks = messages.filter((m) => {
-    const t = m.envelope?.type;
-    if (t === "BREACH") return true;
-    if (t === "RECEIPT") {
-      const b = m.envelope?.body as { decision?: string } | undefined;
-      return b?.decision === "REFUSED";
-    }
-    return false;
-  });
+export default async function BlockedPage() {
+  const rows = await getBlocked();
 
   return (
-    <div className="space-y-4 text-sm">
-      <h1 className="text-2xl font-bold">Blocked</h1>
-      <p className="text-neutral-400">
-        Attacks and off-mandate trades that were stopped &mdash; and permanently
-        recorded on Hedera Consensus Service.
-      </p>
-
-      {!JOURNAL_TOPIC && (
-        <p className="text-amber-400">
-          journalTopicId is not set in deployments.json yet.
+    <div>
+      <header>
+        <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate">
+          Blocked
         </p>
-      )}
+        <h1 className="mt-4 font-serif text-[26px] leading-snug text-signal">
+          Trades the Validator refused to sign, and covenant breaches caught
+          on-chain.
+        </h1>
+        <p className="mt-3 font-sans text-sm text-slate">
+          Each entry is a permanent record on the Hedera Consensus Service. The
+          reason is re-derived from source — mandate, pool state, price feed —
+          not taken from the proposer.
+          {USING_MOCKS && (
+            <span className="block mt-1 text-oxblood">
+              Showing sample data — no journal topic is live yet.
+            </span>
+          )}
+        </p>
+      </header>
 
-      {JOURNAL_TOPIC && blocks.length === 0 && (
-        <p className="text-neutral-500">Nothing blocked yet. Run `npm run inject`.</p>
+      {rows.length === 0 ? (
+        <p className="mt-12 font-serif italic text-[16px] text-slate">
+          Nothing has been blocked yet. Run <span className="font-mono not-italic">npm run inject</span>{" "}
+          against the Validator to see the wall fill.
+        </p>
+      ) : (
+        <div className="mt-8 divide-y divide-hairline border-t border-hairline">
+          {rows.map((row) => (
+            <JournalEntry
+              key={`${row.type}-${row.seq}`}
+              row={row}
+              topicId={JOURNAL_TOPIC_ID}
+            />
+          ))}
+        </div>
       )}
-
-      <ul className="space-y-3">
-        {blocks.map((m) => {
-          const b = m.envelope?.body as Record<string, unknown>;
-          return (
-            <li key={m.sequenceNumber} className="border border-red-900/60 rounded p-4">
-              <div className="flex justify-between text-xs text-neutral-500">
-                <span>{m.envelope?.type}</span>
-                <span>seq {m.sequenceNumber}</span>
-              </div>
-              <div className="mt-1 text-red-300">
-                {String(b?.reason ?? b?.detail ?? "blocked")}
-              </div>
-              <div className="mt-1 text-neutral-500 text-xs break-all">
-                {String(b?.covenant ?? b?.paramsHash ?? "")}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }
