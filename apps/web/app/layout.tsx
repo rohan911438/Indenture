@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Newsreader, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { SiteNav } from "@/components/SiteNav";
+import { ProcessSpine } from "@/components/ProcessSpine";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -55,20 +57,11 @@ export default function RootLayout({
             >
               INDENTURE
             </Link>
-            <nav className="flex gap-6 text-sm">
-              {NAV.map((n) => (
-                <Link
-                  key={n.href}
-                  href={n.href}
-                  className="text-slate hover:text-signal transition-colors"
-                >
-                  {n.label}
-                </Link>
-              ))}
-            </nav>
+            <SiteNav />
           </div>
         </header>
-        <main className="mx-auto max-w-deed px-6 pt-16 pb-24">{children}</main>
+        <ProcessSpine />
+        <main className="mx-auto max-w-deed px-6 pt-14 pb-24">{children}</main>
         <footer className="mx-auto max-w-deed px-6 pb-12 text-xs text-slate">
           Read directly from the Hedera mirror node. No API routes, no database.
         </footer>
