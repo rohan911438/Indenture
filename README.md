@@ -60,7 +60,11 @@ a hidden failure.
 - **`shared-contracts/`** is the frozen wire + event contract both tracks build
   against: `validator-api.md` (`POST /validate`, `GET /mandate`, `GET /health`),
   `hcs-envelope-schema.md` (the 4 message types), `contract-events.md` (the 4
-  journal events). `mock-status.md` lists every mock and its real-wiring seam.
+  journal events), `design-tokens.md` (the frozen design system).
+  `mock-status.md` lists every mock and its real-wiring seam.
+- **`apps/web`** is built against `apps/web/mocks/*.json` (shapes copied from
+  the schemas above). `apps/web/lib/data.ts` is the single seam — swapping to
+  live Mirror Node data is a one-file change. See `apps/web/README.md`.
 - **HCS envelope:** `{v, type: MANDATE|RECEIPT|BREACH|CONTEXT, vault, ts, body}`
 - **`deployments.json`** is the single source of truth for every address/topic
   ID — never read an address from an env var.
@@ -110,7 +114,7 @@ indenture/
 │  ├─ validator/  Worker: Sources seam, covenant checks, /validate /mandate /health
 │  ├─ manager/    untrusted proposer: Rule/Llm, CONTEXT, receipt-blob
 │  ├─ journaler/  cursor-driven, idempotent on-chain -> HCS mirror
-│  └─ web/        Next.js prospectus (frontend track)
+│  └─ web/        Next.js prospectus — 4 routes, mock-backed via lib/data.ts
 ├─ mandates/fund-one.yaml
 ├─ Makefile
 └─ .github/workflows/  ci.yml · agent-tick.yml · journaler.yml
