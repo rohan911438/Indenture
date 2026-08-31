@@ -70,6 +70,8 @@ export interface BreachBody {
 
 export interface ContextBody {
   proposer: "RuleProposer" | "LlmProposer";
+  /** per-vault seq this proposal targets — join key to RECEIPT / BREACH */
+  nonce: number | null;
   poolId: string;
   swapParams: SwapParams;
   reasoning: string;
