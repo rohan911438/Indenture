@@ -32,3 +32,6 @@ apps/journaler/cursor.json
 .DS_Store
 *.log
 coverage/
+
+# tsc incremental cache
+*.tsbuildinfo
