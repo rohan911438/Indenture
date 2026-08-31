@@ -2,6 +2,7 @@ import { parse as parseYaml } from "yaml";
 import { canonicalize } from "json-canonicalize";
 import { keccak256, toHex, type Hex } from "viem";
 import { mandateSchema, type Mandate } from "./schema.js";
+import { buildManagerPrompt } from "./prompt.js";
 
 export type CompiledMandate = {
   mandate: Mandate;
@@ -15,6 +16,8 @@ export type CompiledMandate = {
     maxTradeNotional: bigint;
     maxDailyNotional: bigint;
   };
+  /** deterministic portfolio-manager system prompt (advisory; never trusted) */
+  prompt: string;
 };
 
 export function compileMandate(yamlText: string): CompiledMandate {
@@ -32,5 +35,6 @@ export function compileMandate(yamlText: string): CompiledMandate {
       maxTradeNotional: BigInt(mandate.covenants.maxTradeNotional),
       maxDailyNotional: BigInt(mandate.covenants.maxDailyNotional),
     },
+    prompt: buildManagerPrompt(mandate),
   };
 }
