@@ -1,0 +1,8 @@
+# Keep line endings LF everywhere. This repo is developed on Windows + Linux CI.
+* text=auto eol=lf
+
+# Binary / generated — never touch
+*.png binary
+*.jpg binary
+*.woff2 binary
+package-lock.json -diff
