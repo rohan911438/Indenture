@@ -90,6 +90,7 @@ Journaled for the audit trail. **Never** forwarded to the Validator.
 ```jsonc
 {
   "proposer": "RuleProposer" | "LlmProposer",
+  "nonce": 7,                              // the per-vault seq this proposal targets — join key to RECEIPT / BREACH / Executed
   "poolId": "0x…32 bytes…",
   "swapParams": { "zeroForOne": true, "amountSpecified": "-1000000", "sqrtPriceLimitX96": "4295128740" },
   "reasoning": "free text from the model / rule engine — audit only",

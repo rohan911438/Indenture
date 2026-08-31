@@ -11,6 +11,8 @@ export function buildContextEnvelope(args: {
   vault: string;
   proposer: string;
   proposal: Proposal;
+  /** the per-vault seq this proposal targets — join key to RECEIPT / BREACH */
+  nonce?: number;
   injected?: boolean;
 }): Envelope {
   return makeEnvelope({
@@ -18,6 +20,7 @@ export function buildContextEnvelope(args: {
     vault: args.vault,
     body: {
       proposer: args.proposer,
+      nonce: args.nonce ?? null,
       poolId: args.proposal.poolId,
       swapParams: args.proposal.swapParams,
       reasoning: args.proposal.reasoning,
