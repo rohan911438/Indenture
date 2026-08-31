@@ -55,9 +55,15 @@ export function CovenantGauge({ status }: { status: CovenantStatus }) {
           }}
         />
       </div>
-      <div className="mt-1 font-mono text-[11px] text-slate">
-        {status.mode === "floor" ? "floor" : "cap"} ·{" "}
-        {Math.round(target * 100)}% {danger ? "— near limit" : "headroom"}
+      <div
+        className={
+          "mt-1 font-mono text-[11px] " +
+          (danger ? "text-oxblood" : "text-slate")
+        }
+      >
+        {Math.round(target * 100)}%{" "}
+        {status.mode === "floor" ? "of the floor" : "of the cap"} ·{" "}
+        {danger ? "near limit" : `${100 - Math.round(target * 100)}% headroom`}
       </div>
     </div>
   );
