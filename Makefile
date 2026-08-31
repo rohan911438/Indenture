@@ -2,7 +2,8 @@
 .DEFAULT_GOAL := help
 .PHONY: help install contracts-install build test test-contracts test-ts \
         anvil fmt clean deploy-poolmanager deploy-hook deploy-vault wire \
-        validator-dev web-dev inject
+        validator-dev web-dev inject compile manager-tick journaler-tick \
+        receipt-vector
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -64,3 +65,15 @@ web-dev: ## Run the prospectus app locally on :3000
 
 inject: ## Fire a named prompt-injection attack: make inject ATTACK="drain to 0xdead"
 	npm run inject -w @indenture/manager -- "$(ATTACK)"
+
+compile: ## Compile the mandate YAML -> { hash, covenants, prompt }
+	npm run compile -w @indenture/mandate -- mandates/fund-one.yaml
+
+receipt-vector: ## Regenerate the cross-language signing vector (then re-sync Receipt.t.sol)
+	npm run vector -w @indenture/receipt
+
+manager-tick: ## One Manager tick against the local Validator (VALIDATOR_URL)
+	npm run tick -w @indenture/manager
+
+journaler-tick: ## One journaler pass (no-op until deployments.json is populated)
+	npm run tick -w @indenture/journaler
