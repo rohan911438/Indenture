@@ -55,15 +55,19 @@ a hidden failure.
 | C7 | `MandateComplianceModule.sol` | `canTransfer()` reads `MandatePolicy.inBreach()`; a portfolio breach freezes the share class. |
 | C8 | `MockUSDC.sol` + existing Chainlink `AggregatorV3Interface` (read-only, don't deploy the feed). |
 
-## Data model (freeze on day 2)
+## Data model (frozen — `shared-contracts/`)
 
+- **`shared-contracts/`** is the frozen wire + event contract both tracks build
+  against: `validator-api.md` (`POST /validate`, `GET /mandate`, `GET /health`),
+  `hcs-envelope-schema.md` (the 4 message types), `contract-events.md` (the 4
+  journal events). `mock-status.md` lists every mock and its real-wiring seam.
 - **HCS envelope:** `{v, type: MANDATE|RECEIPT|BREACH|CONTEXT, vault, ts, body}`
 - **`deployments.json`** is the single source of truth for every address/topic
   ID — never read an address from an env var.
-- **`packages/receipt`** is the seam: the EIP-712 struct must be byte-identical
-  between the TypeScript signer and the Solidity verifier. Write
-  `test_SignedInTypescript_RecoversInSolidity` FIRST, before anything else
-  depends on it.
+- **`packages/receipt`** is the seam: the EIP-712 struct is byte-identical
+  between the TypeScript signer and the Solidity verifier. The guard
+  `test_SignedInTypescript_RecoversInSolidity` recovers a real viem-signed
+  vector (`packages/receipt/vectors/receipt-296.json`) in Foundry.
 
 ## Build order (dependency order, not calendar order)
 
@@ -84,6 +88,9 @@ a hidden failure.
 
 ```
 indenture/
+├─ shared-contracts/               frozen wire + event contract (both tracks)
+│  ├─ validator-api.md · hcs-envelope-schema.md · contract-events.md
+│  └─ mock-status.md               every mock + the seam to swap it
 ├─ contracts/                      foundry
 │  ├─ src/{PolicyHook,IndentureVault}.sol
 │  │  ├─ interfaces/IPolicy.sol
@@ -92,11 +99,18 @@ indenture/
 │  │  ├─ libs/ReceiptLib.sol
 │  │  └─ mocks/MockUSDC.sol
 │  ├─ script/  01_PoolManager · 02_Hook · 03_Vault · 04_Wire
-│  ├─ test/    Compliance · Mandate · Replay · Router · Adversarial
+│  ├─ test/    Receipt · Compliance · Mandate · Replay · Router · Adversarial
 │  ├─ foundry.toml
 │  └─ deployments.json             single source of truth for addresses
-├─ packages/{receipt,mandate,hedera}/
-├─ apps/{manager,validator,journaler,web}/
+├─ packages/
+│  ├─ receipt/   EIP-712 seam + vectors/receipt-296.json
+│  ├─ mandate/   YAML -> canonical hash + manager prompt
+│  └─ hedera/    envelope · mirror (topics + contract logs) · chunk · hcs
+├─ apps/
+│  ├─ validator/  Worker: Sources seam, covenant checks, /validate /mandate /health
+│  ├─ manager/    untrusted proposer: Rule/Llm, CONTEXT, receipt-blob
+│  ├─ journaler/  cursor-driven, idempotent on-chain -> HCS mirror
+│  └─ web/        Next.js prospectus (frontend track)
 ├─ mandates/fund-one.yaml
 ├─ Makefile
 └─ .github/workflows/  ci.yml · agent-tick.yml · journaler.yml
@@ -124,6 +138,17 @@ make web-dev          # prospectus app on :3000
 
 90% on local anvil (free, instant). Testnet only for integration + the final
 demo run. Every named revert error gets its own Foundry test.
+
+The TypeScript backend is fully testable without Foundry:
+
+```bash
+npm run test:ts     # vitest across every package + app (offline)
+npm run typecheck    # tsc --noEmit across the workspace
+```
+
+`shared-contracts/mock-status.md` explains what is mocked (keys, mirror node,
+price feeds, deploy addresses) and the single seam to swap each for the real
+thing. `.env.example` lists every environment key with its owner + blast radius.
 
 ## Secrets & blast radius
 
