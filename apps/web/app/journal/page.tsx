@@ -1,44 +1,57 @@
-import { readTopic } from "@indenture/hedera/mirror";
-import { JOURNAL_TOPIC, MIRROR_URL } from "@/lib/deployments";
+import { JournalEntry } from "@/components/JournalEntry";
+import { getJournal, JOURNAL_TOPIC_ID, USING_MOCKS } from "@/lib/data";
+import type { ReceiptBody } from "@/lib/types";
 
-export const revalidate = 10;
+export const revalidate = 5;
 
-/** The full append-only journal: every CONTEXT, RECEIPT, BREACH in order. */
-export default async function Journal() {
-  const messages = JOURNAL_TOPIC
-    ? await readTopic(JOURNAL_TOPIC, { mirrorUrl: MIRROR_URL, limit: 100, order: "desc" })
-    : [];
+/**
+ * The full append-only journal — every RECEIPT and BREACH in order, approved
+ * and refused alike. Same JournalEntry component as /blocked, unfiltered.
+ */
+export default async function JournalPage() {
+  const rows = await getJournal();
+
+  const approved = rows.filter(
+    (r) => r.type === "RECEIPT" && (r.body as ReceiptBody).decision === "APPROVED",
+  ).length;
+  const refused = rows.filter(
+    (r) => r.type === "RECEIPT" && (r.body as ReceiptBody).decision === "REFUSED",
+  ).length;
+  const breaches = rows.filter((r) => r.type === "BREACH").length;
 
   return (
-    <div className="space-y-4 text-sm">
-      <h1 className="text-2xl font-bold">Journal</h1>
-      <p className="text-neutral-400">
-        Topic {JOURNAL_TOPIC || "(unset)"} &mdash; read straight from the mirror
-        node. This is the only database.
-      </p>
-      <table className="w-full text-xs">
-        <thead className="text-neutral-500 text-left">
-          <tr>
-            <th className="py-1">seq</th>
-            <th>type</th>
-            <th>summary</th>
-          </tr>
-        </thead>
-        <tbody>
-          {messages.map((m) => {
-            const b = (m.envelope?.body ?? {}) as Record<string, unknown>;
-            return (
-              <tr key={m.sequenceNumber} className="border-t border-neutral-900">
-                <td className="py-1 pr-2 text-neutral-500">{m.sequenceNumber}</td>
-                <td className="pr-2">{m.envelope?.type ?? "raw"}</td>
-                <td className="text-neutral-400">
-                  {String(b.decision ?? b.covenant ?? b.reasoning ?? m.raw.slice(0, 80))}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div>
+      <header>
+        <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate">
+          Journal
+        </p>
+        <h1 className="mt-4 font-serif text-[26px] leading-snug text-signal">
+          Every decision the Validator made, in the order the network agreed
+          it.
+        </h1>
+        <p className="mt-3 font-mono text-xs text-slate">
+          topic {JOURNAL_TOPIC_ID || "(unset)"} · {approved} approved ·{" "}
+          {refused} refused · {breaches} breach{breaches === 1 ? "" : "es"}
+          {USING_MOCKS && <span className="text-oxblood"> · sample data</span>}
+        </p>
+      </header>
+
+      {rows.length === 0 ? (
+        <p className="mt-12 font-serif italic text-[16px] text-slate">
+          The journal is empty. Once the Manager proposes its first trade, the
+          Validator&apos;s decision lands here.
+        </p>
+      ) : (
+        <div className="mt-8 divide-y divide-hairline border-t border-hairline">
+          {rows.map((row) => (
+            <JournalEntry
+              key={`${row.type}-${row.seq}`}
+              row={row}
+              topicId={JOURNAL_TOPIC_ID}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
