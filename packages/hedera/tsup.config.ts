@@ -1,7 +1,13 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/envelope.ts", "src/mirror.ts", "src/hcs.ts"],
+  entry: [
+    "src/index.ts",
+    "src/envelope.ts",
+    "src/mirror.ts",
+    "src/chunk.ts",
+    "src/hcs.ts",
+  ],
   format: ["esm", "cjs"],
   dts: true,
   clean: true,

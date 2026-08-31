@@ -23,6 +23,11 @@
       "import": "./dist/mirror.js",
       "require": "./dist/mirror.cjs"
     },
+    "./chunk": {
+      "types": "./dist/chunk.d.ts",
+      "import": "./dist/chunk.js",
+      "require": "./dist/chunk.cjs"
+    },
     "./hcs": {
       "types": "./dist/hcs.d.ts",
       "import": "./dist/hcs.js",
