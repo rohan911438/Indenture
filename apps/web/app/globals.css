@@ -2,11 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Frozen tokens — shared-contracts/design-tokens.md */
 :root {
-  color-scheme: light dark;
+  --ink: #14181d;
+  --ink-raised: #1b2027;
+  --bone: #e8e3d3;
+  --brass: #a6863c;
+  --oxblood: #6b2737;
+  --slate: #4a5560;
+  --signal: #f5f2ea;
+  --hairline: rgba(245, 242, 234, 0.12);
+  color-scheme: dark;
 }
 
 body {
-  background: #0b0b0c;
-  color: #e7e7e9;
+  background: var(--ink);
+  color: var(--signal);
+  font-family: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numerals in the mandate sentence — italic brass, the one flourish */
+.numeral {
+  font-family: var(--font-newsreader), "Newsreader", Georgia, serif;
+  font-style: italic;
+  color: var(--brass);
+  font-weight: 500;
+}
+
+a {
+  color: inherit;
+}
+
+/* The single motion moment: gauge fill on load. Honour reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }
