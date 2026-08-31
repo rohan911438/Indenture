@@ -1,0 +1,30 @@
+{
+  "shareClass": {
+    "token": "0x00000000000000000000000000000000000000f0",
+    "name": "Fund One Class A",
+    "totalSupply": "1000000000000",
+    "holders": 7,
+    "navPerShare": "1.0182",
+    "frozen": false,
+    "frozenReason": null
+  },
+  "wallets": [
+    {
+      "address": "0x00000000000000000000000000000000000000A1",
+      "label": "Verified LP",
+      "identityVerified": true
+    },
+    {
+      "address": "0x00000000000000000000000000000000000000A2",
+      "label": "Unverified wallet",
+      "identityVerified": false,
+      "refusalReason": "ComplianceRefused: identity 0x…A2 is not verified in the IdentityRegistry"
+    },
+    {
+      "address": "0x00000000000000000000000000000000000000A3",
+      "label": "Verified, but class frozen",
+      "identityVerified": true,
+      "refusalReason": "ComplianceRefused: share class is frozen — MandatePolicy.inBreach() is true"
+    }
+  ]
+}
