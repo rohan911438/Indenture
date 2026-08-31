@@ -9,6 +9,9 @@
  * the demo is that the block is visible on /blocked, not hidden.
  */
 import type { Proposal } from "./proposer.js";
+import { buildContextEnvelope, validatorRequest } from "./context.js";
+
+const VAULT_MOCK = "0x00000000000000000000000000000000000000b0";
 
 type Scenario = {
   name: string;
@@ -86,13 +89,28 @@ async function main() {
   console.log(`         ${freeText}`);
   if (scenario) console.log(`[inject] expected outcome: ${scenario.expect}`);
 
+  // The injected free text is journaled as CONTEXT and NEVER sent onward.
+  const context = buildContextEnvelope({
+    vault: VAULT_MOCK,
+    proposer: "LlmProposer",
+    proposal,
+    injected: true,
+  });
+  console.log(`[inject] CONTEXT envelope: ${JSON.stringify(context.body)}`);
+
   const validatorUrl = process.env.VALIDATOR_URL ?? "http://localhost:8787";
   const res = await fetch(`${validatorUrl}/validate`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ poolId: proposal.poolId, swapParams: proposal.swapParams }),
+    body: JSON.stringify(validatorRequest(proposal)), // exactly {poolId, swapParams}
   });
-  console.log(`[inject] validator -> ${res.status} ${JSON.stringify(await res.json())}`);
+  const out = (await res.json()) as { decision?: string; reason?: string; detail?: unknown };
+  console.log(`[inject] validator -> HTTP ${res.status} ${out.decision ?? "?"}`);
+  if (out.decision === "REFUSED") {
+    console.log(`[inject] BLOCKED: ${out.reason} ${JSON.stringify(out.detail ?? {})}`);
+  } else {
+    console.log(`[inject] NOT blocked by the Validator - the on-chain hook is the backstop`);
+  }
 }
 
 main().catch((e) => {
