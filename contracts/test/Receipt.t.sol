@@ -9,11 +9,11 @@ import {ReceiptLib} from "../src/libs/ReceiptLib.sol";
 /// signer in `packages/receipt` must recover to the same address here.
 ///
 /// Vector source: packages/receipt/vectors/receipt-296.json
-/// Regenerate with: npm run vector -w @indenture/receipt
+/// Regenerate with: npm run vector -w the receipt package
 contract ReceiptTest is Test {
     // --- pasted from packages/receipt/vectors/receipt-296.json ---
     uint256 constant CHAIN_ID = 296;
-    address constant VERIFYING_CONTRACT = 0x00000000000000000000000000000000000000A4;
+    address constant VERIFYING_CONTRACT = 0x00000000000000000000000000000000000000a4;
     address constant EXPECTED_SIGNER = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // anvil #0
 
     bytes32 constant EXPECTED_DOMAIN_SEPARATOR =
@@ -48,12 +48,12 @@ contract ReceiptTest is Test {
 
     function test_DigestMatchesTypescript() public pure {
         bytes32 ds = ReceiptLib.domainSeparator(CHAIN_ID, VERIFYING_CONTRACT);
-        assertEq(ReceiptLib.digest(ds, _vector()), EXPECTED_DIGEST);
+        assertEq(ReceiptLib.digest(_vector(), ds), EXPECTED_DIGEST);
     }
 
     function test_SignedInTypescript_RecoversInSolidity() public pure {
         bytes32 ds = ReceiptLib.domainSeparator(CHAIN_ID, VERIFYING_CONTRACT);
-        bytes32 digest = ReceiptLib.digest(ds, _vector());
+        bytes32 digest = ReceiptLib.digest(_vector(), ds);
         address recovered = ECDSA.recover(digest, SIG);
         assertEq(recovered, EXPECTED_SIGNER);
     }
@@ -62,7 +62,7 @@ contract ReceiptTest is Test {
         bytes32 ds = ReceiptLib.domainSeparator(CHAIN_ID, VERIFYING_CONTRACT);
         ReceiptLib.Receipt memory r = _vector();
         r.seq = 1; // tamper
-        address recovered = ECDSA.recover(ReceiptLib.digest(ds, r), SIG);
+        address recovered = ECDSA.recover(ReceiptLib.digest(r, ds), SIG);
         assertTrue(recovered != EXPECTED_SIGNER);
     }
 }

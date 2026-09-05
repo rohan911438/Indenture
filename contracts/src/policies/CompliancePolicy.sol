@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {IPolicy} from "../interfaces/IPolicy.sol";
 
 /// @notice Minimal ERC-3643 surface we depend on. Provided by the ATS suite
-///         (deployed via @hashgraph/asset-tokenization-sdk - NOT hand-rolled).
+///         (deployed via the hashgraph/asset-tokenization-sdk - NOT hand-rolled).
 interface IIdentityRegistry {
     function isVerified(address account) external view returns (bool);
 }

@@ -51,7 +51,7 @@ library ReceiptLib {
     }
 
     /// @notice EIP-712 digest given a domain separator.
-    function digest(bytes32 domainSeparator, Receipt memory r) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19\x01", domainSeparator, hashStruct(r)));
+    function digest(Receipt memory r, bytes32 ds) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked("\x19\x01", ds, hashStruct(r)));
     }
 }

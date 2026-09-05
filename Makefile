@@ -13,13 +13,8 @@ install: ## Install JS deps (npm) + Foundry libs
 	npm install
 	$(MAKE) contracts-install
 
-contracts-install: ## forge install the vendored libs
-	cd contracts && forge install \
-		foundry-rs/forge-std \
-		OpenZeppelin/openzeppelin-contracts \
-		Uniswap/v4-core \
-		Uniswap/v4-periphery \
-		--no-commit
+contracts-install: ## restore the pinned Foundry libs (git submodules)
+	git submodule update --init --recursive contracts/lib
 
 build: ## Build TS packages + contracts
 	npm run build

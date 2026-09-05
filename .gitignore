@@ -13,7 +13,7 @@ out/
 contracts/cache/
 contracts/out/
 contracts/broadcast/**/dry-run/
-contracts/lib/
+contracts/foundry.lock
 
 # env / secrets
 .env

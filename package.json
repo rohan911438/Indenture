@@ -18,8 +18,9 @@
     "test:contracts": "cd contracts && forge test",
     "test:ts": "npm run test --workspaces --if-present",
     "contracts:build": "cd contracts && forge build",
-    "contracts:install": "cd contracts && forge install",
-    "inject": "npm run inject -w @indenture/manager --"
+    "contracts:install": "git submodule update --init --recursive contracts/lib",
+    "inject": "npm run inject -w @indenture/manager --",
+    "pretest:ts": "npm run build"
   },
   "devDependencies": {
     "typescript": "^5.6.3"
