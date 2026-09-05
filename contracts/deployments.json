@@ -1,0 +1,40 @@
+{
+  "$comment": "SINGLE SOURCE OF TRUTH for every address / topic id. Never read an address from an env var. Deploy scripts write here; every service reads here.",
+  "network": {
+    "name": "hedera-testnet",
+    "chainId": 296,
+    "rpcUrl": "https://testnet.hashio.io/api",
+    "mirrorUrl": "https://testnet.mirrornode.hedera.com/api/v1"
+  },
+  "contracts": {
+    "PoolManager": "",
+    "PolicyHook": "",
+    "CompliancePolicy": "",
+    "MandatePolicy": "",
+    "IndentureVault": "",
+    "MandateComplianceModule": "",
+    "MockUSDC": "",
+    "ChainlinkPriceFeed": ""
+  },
+  "ats": {
+    "SecurityToken": "",
+    "IdentityRegistry": "",
+    "ModularCompliance": ""
+  },
+  "pool": {
+    "poolId": "",
+    "currency0": "",
+    "currency1": "",
+    "fee": 3000,
+    "tickSpacing": 60
+  },
+  "hcs": {
+    "mandateTopicId": "",
+    "journalTopicId": ""
+  },
+  "signers": {
+    "validator": "",
+    "issuer": "",
+    "manager": ""
+  }
+}

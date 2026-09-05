@@ -1,0 +1,35 @@
+{
+  "name": "@indenture/mandate",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Mandate compiler: fund-one.yaml -> canonical JSON -> reproducible mandateHash + covenant params",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "compile": "tsx src/cli.ts",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "json-canonicalize": "^1.0.6",
+    "viem": "^2.21.0",
+    "yaml": "^2.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0"
+  }
+}

@@ -1,0 +1,37 @@
+# dependencies
+node_modules/
+.npm/
+
+# builds
+dist/
+build/
+out/
+.next/
+.turbo/
+
+# foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/**/dry-run/
+contracts/foundry.lock
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+*.key
+.dev.vars
+
+# wrangler
+apps/validator/.wrangler/
+
+# journaler runtime cursor (committed position lives in the workflow, not the repo)
+apps/journaler/cursor.json
+
+# misc
+.DS_Store
+*.log
+coverage/
+
+# tsc incremental cache
+*.tsbuildinfo

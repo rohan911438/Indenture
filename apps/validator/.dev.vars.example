@@ -1,0 +1,7 @@
+# Copy to apps/validator/.dev.vars for `wrangler dev`. NEVER commit .dev.vars
+# (it is gitignored). In production this is a Wrangler secret:
+#   wrangler secret put VALIDATOR_KEY
+#
+# Mock value below = anvil account #0 (address 0xf39Fd6…2266), matching the
+# packages/receipt cross-language vector. Swap for a throwaway testnet key.
+VALIDATOR_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
