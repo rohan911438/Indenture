@@ -88,10 +88,13 @@ z.object({
 }
 ```
 
-Refusal reasons (the `covenant` field), in check order:
+Refusal reasons (the `covenant` field), in check order. Feed integrity is
+checked before everything else: a price that failed validation is not a price,
+and every covenant below it is denominated in one.
 
 | `covenant`         | Meaning |
 |--------------------|---------|
+| `feedUnusable`     | A price feed failed validation for a reason other than age: the round has not completed (`updatedAt == 0`), the answer was carried over from an earlier round (`answeredInRound < roundId`), the price is non-positive, or the feed is unreachable. `detail.fault` carries which. |
 | `feedStaleness`    | A price feed the trade depends on is older than the mandate's `feedStaleAfterSec`. The Validator refuses; the hook never sees a staleness judgement. |
 | `assetNotInUniverse` | The bought asset is not in the mandate `universe`. |
 | `maxTradeNotional` | `|amountSpecified|` priced in quote units exceeds the per-trade cap. |

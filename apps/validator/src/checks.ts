@@ -36,12 +36,25 @@ export type CovenantInputs = {
   oldestFeedAgeSec: number;
   /** mandate staleness tolerance, seconds */
   feedStaleAfterSec: number;
+  /**
+   * Set when a feed failed validation for a reason that is NOT age: an
+   * incomplete round, an answer carried over from a previous round, a
+   * non-positive price, or an unreachable feed. See @indenture/chainlink.
+   *
+   * Kept distinct from staleness because the journal is the product. "the
+   * feed reported a negative price" and "the feed is 3 hours old" are
+   * different events for anyone auditing why a trade did not happen, and
+   * collapsing both into a staleness message would be a small lie told
+   * permanently, on chain.
+   */
+  feedFault?: { fault: string; reason: string; detail: Record<string, string> };
 };
 
 export type CheckOk = { ok: true; snapshot: Record<string, string> };
 export type CheckRefusal = {
   ok: false;
   covenant:
+    | "feedUnusable"
     | "feedStaleness"
     | "assetNotInUniverse"
     | "maxTradeNotional"
@@ -61,6 +74,18 @@ function bps(part: bigint, whole: bigint): bigint {
 }
 
 export function runCovenantChecks(i: CovenantInputs): CheckResult {
+  // 0. feed integrity - a price that failed validation is not a price. This
+  //    is checked before staleness because "the round never completed" is a
+  //    stronger and more specific statement than "it is old".
+  if (i.feedFault) {
+    return {
+      ok: false,
+      covenant: "feedUnusable",
+      reason: i.feedFault.reason,
+      detail: { fault: i.feedFault.fault, ...i.feedFault.detail },
+    };
+  }
+
   // 1. staleness - the Validator simply refuses; the hook never sees this.
   if (i.oldestFeedAgeSec > i.feedStaleAfterSec) {
     return {
