@@ -92,7 +92,7 @@ Refusal reasons (the `covenant` field), in check order:
 
 | `covenant`         | Meaning |
 |--------------------|---------|
-| `feedStaleness`    | A price feed the trade depends on is older than the mandate tolerance. The Validator refuses; the hook never sees a staleness judgement. |
+| `feedStaleness`    | A price feed the trade depends on is older than the mandate's `feedStaleAfterSec`. The Validator refuses; the hook never sees a staleness judgement. |
 | `assetNotInUniverse` | The bought asset is not in the mandate `universe`. |
 | `maxTradeNotional` | `|amountSpecified|` priced in quote units exceeds the per-trade cap. |
 | `maxDailyNotional` | Rolling 24h notional (summed from the journal topic) would exceed the daily cap. |
@@ -121,10 +121,17 @@ render the rulebook without recompiling YAML.
     "maxPositionBps": 3000,
     "minCashBps": 1000,
     "maxTradeNotional": "250000000000",
-    "maxDailyNotional": "1000000000000"
+    "maxDailyNotional": "1000000000000",
+    "feedStaleAfterSec": 90000
   }
 }
 ```
+
+`feedStaleAfterSec` is a Validator-only rule: it is judged off-chain and never
+reaches `MandatePolicy`, so it is absent from `amend()`. It MUST be at least the
+price feed's heartbeat — Chainlink's Hedera feeds beat every 86400s, so a value
+below that refuses healthy feeds and silently stops the fund trading. See
+`docs/RESEARCH.md` section 2.1.
 
 ---
 

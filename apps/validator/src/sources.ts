@@ -23,6 +23,8 @@ export type MandateSnapshot = {
   limits: CovenantLimits;
   universe: string[];
   quote: string;
+  /** price-feed staleness tolerance, seconds — a MANDATE field, not a constant */
+  feedStaleAfterSec: number;
 };
 
 export type Binding = {
@@ -84,7 +86,6 @@ const NAV_QUOTE = 1_000_000_000_000n;
 const CASH_QUOTE = 400_000_000_000n; // 4000 bps
 const POSITION_D0 = 250_000_000_000n; // 2500 bps  <- ~500bps of headroom on a buy
 const POSITION_D1 = 200_000_000_000n; // 2000 bps
-const FEED_STALE_AFTER_SEC = 3600;
 
 export class MockSources implements Sources {
   constructor(private readonly cfg: MockConfig = {}) {}
@@ -98,6 +99,7 @@ export class MockSources implements Sources {
       limits: c.covenantArgs,
       universe: c.mandate.universe,
       quote: c.mandate.quote,
+      feedStaleAfterSec: c.feedStaleAfterSec,
     };
   }
 
@@ -150,7 +152,7 @@ export class MockSources implements Sources {
         postTradeCashQuote < 0n ? 0n : postTradeCashQuote,
       postTradePositionQuote: buyingAsset ? postTradePositionQuote : 0n,
       oldestFeedAgeSec: this.cfg.feedAgeSec ?? 12,
-      feedStaleAfterSec: FEED_STALE_AFTER_SEC,
+      feedStaleAfterSec: m.feedStaleAfterSec,
     };
   }
 }

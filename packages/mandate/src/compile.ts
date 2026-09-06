@@ -9,13 +9,17 @@ export type CompiledMandate = {
   canonical: string;
   /** keccak256(utf8 canonical JSON) - the single agreed-upon mandateHash */
   hash: Hex;
-  /** covenant params in the exact shape MandatePolicy.amend() expects */
+  /** covenant params in the exact shape MandatePolicy.amend() expects.
+   *  feedStaleAfterSec is deliberately NOT here: staleness is judged off-chain
+   *  by the Validator and never reaches the hook (design rule 4). */
   covenantArgs: {
     maxPositionBps: bigint;
     minCashBps: bigint;
     maxTradeNotional: bigint;
     maxDailyNotional: bigint;
   };
+  /** Validator-only: price-feed staleness tolerance, seconds. */
+  feedStaleAfterSec: number;
   /** deterministic portfolio-manager system prompt (advisory; never trusted) */
   prompt: string;
 };
@@ -35,6 +39,7 @@ export function compileMandate(yamlText: string): CompiledMandate {
       maxTradeNotional: BigInt(mandate.covenants.maxTradeNotional),
       maxDailyNotional: BigInt(mandate.covenants.maxDailyNotional),
     },
+    feedStaleAfterSec: mandate.covenants.feedStaleAfterSec,
     prompt: buildManagerPrompt(mandate),
   };
 }

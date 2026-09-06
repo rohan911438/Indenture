@@ -20,7 +20,7 @@ Findings driving this plan are in [RESEARCH.md](RESEARCH.md).
 | 1 | On-chain spine | `Router.t.sol`, `Replay.t.sol`, sig/binding half of `Mandate.t.sol` green | ✅ done |
 | 2 | Covenants enforced | `Mandate.t.sol` + `Adversarial.t.sol` fully green | ✅ done |
 | 3 | Compliance | `Compliance.t.sol` green | ✅ done (3.2 deferred to Sprint 5) |
-| 4 | Real data | Validator + journaler off mocks, `mock-status.md` rows 3–8 closed | ⬜ |
+| 4 | Real data | Validator + journaler off mocks, `mock-status.md` rows 3–8 closed | 🟡 4.1–4.2 done; 4.3–4.7 need testnet |
 | 5 | Testnet | `deployments.json` fully populated, one real trade | ⬜ |
 | 6 | Frontend live | `lib/data.ts` reads chain, 4 routes render real data | ⬜ |
 | 7 | Demo | injection → refusal → journal, on testnet, repeatable | ⬜ |
@@ -171,13 +171,19 @@ closes rows 3–8.
 
 | # | Task |
 |---|---|
-| 4.1 | **Fix the staleness trap** — `feedStaleAfterSec` into the mandate YAML + compiler, default `90000`. RESEARCH §2.1. Do this first; it is a one-line bug that would have killed the demo |
-| 4.2 | Fix the KV nonce lock: acquire on the approval path only, release on refusal (§2.6) |
+| 4.1 | ✅ **Fixed the staleness trap** — `feedStaleAfterSec` is now a required mandate field, default `90000`, threaded through the compiler, the Validator's `Sources`, `GET /mandate`, and both wire-contract specs. Two regression tests pin it: a feed one full 86400s heartbeat old is accepted, one past tolerance is still refused |
+| 4.2 | ✅ **Fixed the KV nonce lock** — covenants are now checked *before* the lock is taken, so a refusal no longer holds the nonce for 120s and block the next legitimate proposal. The comment now says plainly that the lock is journal hygiene, not a security control; `MandatePolicy.seqOf` is the real boundary |
 | 4.3 | `MirrorSources`: mandate from the HCS topic, vault/pool state via RPC, Chainlink feeds at the addresses in §1.3 |
 | 4.4 | Rolling-24h notional summed from the journal topic (replaces the hardcoded `0`) |
 | 4.5 | `MirrorFundStateProvider` for the Manager |
 | 4.6 | Manager actually submits `CONTEXT` and actually calls `vault.trade()` on APPROVED |
 | 4.7 | Journaler: real mirror reader + HCS submitter, idempotent on `(nonce, event)` |
+
+**Blocked on Sprint 5.** 4.3–4.7 all read live chain state, and every address in
+`deployments.json` is still an empty string. They cannot be written against
+anything real until the deploy happens, and writing them against guesses would
+be the opposite of the "re-derive every fact from source" rule. 4.1 and 4.2 were
+pure defect fixes and did not need the network, so they are done.
 
 **Exit:** Validator answers `/validate` from live testnet state with `MockSources`
 deleted from the runtime path. `MockSources` stays in the repo — it is what makes

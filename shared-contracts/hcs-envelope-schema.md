@@ -47,7 +47,8 @@ from an env var.
     "maxPositionBps": 3000,
     "minCashBps": 1000,
     "maxTradeNotional": "250000000000",
-    "maxDailyNotional": "1000000000000"
+    "maxDailyNotional": "1000000000000",
+    "feedStaleAfterSec": 90000
   },
   "prevMandateHash": "0x…" | null          // set on AMENDED
 }
