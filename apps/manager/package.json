@@ -12,6 +12,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@indenture/chainlink": "*",
     "@indenture/hedera": "*",
     "@indenture/mandate": "*",
     "@indenture/receipt": "*",

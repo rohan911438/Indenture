@@ -11,7 +11,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w @indenture/receipt -w @indenture/mandate -w @indenture/hedera",
+    "build": "npm run build -w @indenture/receipt -w @indenture/mandate -w @indenture/chainlink -w @indenture/hedera",
     "typecheck": "npm run lint --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test:contracts && npm run test:ts",
