@@ -1,3 +1,12 @@
+import {
+  createPublicClient,
+  http,
+  parseAbi,
+  getAddress,
+  type Hex,
+  type Transport,
+} from "viem";
+import { readFeed, valueInQuote, bps as toBps } from "@indenture/chainlink";
 import type { FundState } from "./proposer.js";
 
 /**
@@ -28,8 +37,103 @@ export class MockFundStateProvider implements FundStateProvider {
   }
 }
 
+const erc20Abi = parseAbi([
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+]);
+
+export type MirrorFundConfig = {
+  rpcUrl: string;
+  poolId: string;
+  vault: Hex;
+  /** the cash currency */
+  quote: Hex;
+  /** asset -> Chainlink AggregatorV3 feed, from the mandate */
+  priceFeeds: Record<string, string>;
+  /** the mandate's staleness tolerance, seconds */
+  feedStaleAfterSec: number;
+};
+
 /**
- * TODO (build step 6): MirrorFundStateProvider — read the vault's token
- * balances + the pool state from the mirror node, price each with the
- * Chainlink feed the mandate lists, reduce to weights + cashBps.
+ * The Manager's real view of the fund: vault balances priced by the feeds the
+ * mandate names, reduced to weights in bps.
+ *
+ * This is ADVISORY. Nothing here is trusted by anything downstream — the
+ * Validator re-derives all of it independently, and disagreement between the
+ * two is expected and harmless. That is the whole reason the Manager is
+ * allowed to be a language model: being wrong here costs nothing.
  */
+export class MirrorFundStateProvider implements FundStateProvider {
+  readonly name = "MirrorFundStateProvider";
+
+  constructor(
+    private readonly cfg: MirrorFundConfig,
+    private readonly transport?: Transport,
+  ) {}
+
+  async read(): Promise<FundState> {
+    const client = createPublicClient({
+      transport: this.transport ?? http(this.cfg.rpcUrl),
+    });
+
+    const quoteDecimals = Number(
+      await client.readContract({
+        address: this.cfg.quote,
+        abi: erc20Abi,
+        functionName: "decimals",
+      }),
+    );
+    const cash = await client.readContract({
+      address: this.cfg.quote,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [this.cfg.vault],
+    });
+
+    // Same validated reader the Validator uses (@indenture/chainlink), so the
+    // two never disagree about what counts as a usable price. A feed the
+    // Validator would refuse must not quietly become a number the Manager
+    // proposes against.
+    const assets = Object.keys(this.cfg.priceFeeds);
+    const valued = await Promise.all(
+      assets.map(async (asset) => {
+        const address = getAddress(asset);
+        const [decimals, balance, reading] = await Promise.all([
+          client.readContract({ address, abi: erc20Abi, functionName: "decimals" }),
+          client.readContract({
+            address,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [this.cfg.vault],
+          }),
+          readFeed(client, this.cfg.priceFeeds[asset]!, {
+            maxAgeSec: this.cfg.feedStaleAfterSec,
+          }),
+        ]);
+
+        // Unusable price -> weight zero. The Manager is advisory and untrusted,
+        // so being wrong is cheap; pretending to know a price is not, because
+        // it would produce confident proposals the Validator then refuses for
+        // reasons the Manager cannot see.
+        if (!reading.ok) return { asset, value: 0n, price: 0 };
+
+        return {
+          asset,
+          value: valueInQuote(balance, Number(decimals), reading, quoteDecimals),
+          price: Number(reading.answer) / 10 ** reading.decimals,
+        };
+      }),
+    );
+
+    const nav = valued.reduce((acc, v) => acc + v.value, cash);
+    const bps = (part: bigint) => Number(toBps(part, nav));
+
+    return {
+      poolId: this.cfg.poolId,
+      weights: Object.fromEntries(valued.map((v) => [v.asset, bps(v.value)])),
+      cashBps: bps(cash),
+      prices: Object.fromEntries(valued.map((v) => [v.asset, v.price])),
+    };
+  }
+}
+

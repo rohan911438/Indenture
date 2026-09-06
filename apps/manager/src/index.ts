@@ -16,14 +16,45 @@ import { buildManagerPrompt, compileMandate } from "@indenture/mandate";
 import type { Proposer } from "./proposer.js";
 import { RuleProposer } from "./rule-proposer.js";
 import { LlmProposer } from "./llm-proposer.js";
-import { MockFundStateProvider, type FundStateProvider } from "./fund-state.js";
+import {
+  MockFundStateProvider,
+  MirrorFundStateProvider,
+  type FundStateProvider,
+} from "./fund-state.js";
 import {
   buildContextEnvelope,
   encodeReceiptBlob,
   validatorRequest,
 } from "./context.js";
+import { submitTrade, type PoolConfig } from "./trade.js";
+import type { Hex } from "viem";
 
 const VAULT_MOCK = "0x00000000000000000000000000000000000000b0";
+
+type DeploymentsFile = {
+  network?: { rpcUrl?: string; chainId?: number };
+  contracts?: Record<string, string>;
+  pool?: { currency0?: string; currency1?: string; fee?: number; tickSpacing?: number };
+  hcs?: Record<string, string>;
+};
+
+/** deployments.json is the single source of truth. Never read an address from env. */
+function loadDeployments(): DeploymentsFile {
+  try {
+    const base = process.env.INIT_CWD ?? process.cwd();
+    return JSON.parse(
+      readFileSync(resolve(base, "contracts/deployments.json"), "utf8"),
+    ) as DeploymentsFile;
+  } catch {
+    try {
+      return JSON.parse(
+        readFileSync(resolve(process.cwd(), "../../contracts/deployments.json"), "utf8"),
+      ) as DeploymentsFile;
+    } catch {
+      return {};
+    }
+  }
+}
 
 function mandatePrompt(): string {
   try {
@@ -51,9 +82,35 @@ function pickProposer(): Proposer {
   return new RuleProposer();
 }
 
+/**
+ * mock-status.md row 6. Switches on the DATA, like the Validator's own seam:
+ * if deployments.json has no addresses there is genuinely nothing to read.
+ *
+ * Being wrong here is cheap — this view is advisory and the Validator
+ * re-derives everything independently — so it falls back quietly rather than
+ * failing the tick.
+ */
 function stateProvider(): FundStateProvider {
-  // TODO: MirrorFundStateProvider once deployments.json has real addresses.
-  return new MockFundStateProvider();
+  const dep = loadDeployments();
+  const vault = dep.contracts?.IndentureVault;
+  const poolId = (dep.pool as { poolId?: string } | undefined)?.poolId;
+  if (!vault || !poolId) return new MockFundStateProvider();
+
+  try {
+    const base = process.env.INIT_CWD ?? process.cwd();
+    const yaml = readFileSync(resolve(base, "mandates/fund-one.yaml"), "utf8");
+    const compiled = compileMandate(yaml);
+    return new MirrorFundStateProvider({
+      rpcUrl: dep.network?.rpcUrl ?? "https://testnet.hashio.io/api",
+      poolId,
+      vault: vault as Hex,
+      quote: compiled.mandate.quote as Hex,
+      priceFeeds: compiled.mandate.priceFeeds,
+      feedStaleAfterSec: compiled.feedStaleAfterSec,
+    });
+  } catch {
+    return new MockFundStateProvider();
+  }
 }
 
 async function submitContext(envBody: ReturnType<typeof buildContextEnvelope>) {
@@ -129,10 +186,48 @@ export async function tick(opts: { injected?: boolean } = {}): Promise<void> {
 
   const blob = encodeReceiptBlob(out.receipt, out.signature);
   console.log(`[manager] APPROVED. receiptBlob=${blob.slice(0, 66)}…`);
-  console.log(
-    `[manager] would call vault.trade(key, params, receiptBlob) via MANAGER_KEY`,
-  );
-  // TODO: viem walletClient.writeContract IndentureVault.trade(...) on APPROVED.
+
+  // --- submit on chain -----------------------------------------------------
+  const dep = loadDeployments();
+  const vault = dep.contracts?.IndentureVault;
+  const hooks = dep.contracts?.PolicyHook;
+  const managerKey = process.env.MANAGER_KEY;
+
+  if (!vault || !hooks || !dep.pool?.currency0 || !dep.pool?.currency1) {
+    console.log("[manager] deployments.json not populated - not submitting");
+    return;
+  }
+  if (!managerKey) {
+    console.log("[manager] MANAGER_KEY not set - not submitting");
+    return;
+  }
+
+  const pool: PoolConfig = {
+    currency0: dep.pool.currency0 as Hex,
+    currency1: dep.pool.currency1 as Hex,
+    fee: dep.pool.fee ?? 3000,
+    tickSpacing: dep.pool.tickSpacing ?? 60,
+    hooks: hooks as Hex,
+  };
+
+  try {
+    const hash = await submitTrade({
+      vault: vault as Hex,
+      pool,
+      swapParams: proposal.swapParams,
+      receiptBlob: blob,
+      privateKey: managerKey as Hex,
+      rpcUrl: dep.network?.rpcUrl ?? "https://testnet.hashio.io/api",
+      chainId: dep.network?.chainId ?? 296,
+    });
+    console.log(`[manager] vault.trade submitted: ${hash}`);
+  } catch (e) {
+    // A revert here is a SUCCESS for the product, not a crash: it means the
+    // hook refused a trade the Validator had already signed. Log it plainly
+    // and let the journaler pick the refusal up from chain.
+    const firstLine = (e as Error).message.split("\n")[0];
+    console.log(`[manager] vault.trade reverted: ${firstLine}`);
+  }
 }
 
 if (process.argv.includes("--once")) {
