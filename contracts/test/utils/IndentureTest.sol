@@ -51,8 +51,14 @@ abstract contract IndentureTest is Deployers {
     // Sprint 1 only needs them present so `amend()` has something to write.
     uint256 internal constant MAX_POSITION_BPS = 3000;
     uint256 internal constant MIN_CASH_BPS = 1000;
-    uint256 internal constant MAX_TRADE_NOTIONAL = 250_000_000_000;
-    uint256 internal constant MAX_DAILY_NOTIONAL = 1_000_000_000_000;
+    // Sized in wei of the fixture's 18dp currencies, generously above the
+    // trades the happy-path tests make, so only the tests that mean to breach
+    // a cap do so.
+    uint256 internal constant MAX_TRADE_NOTIONAL = 100e18;
+    uint256 internal constant MAX_DAILY_NOTIONAL = 500e18;
+
+    /// The fixture treats currency1 as the quote (cash) side.
+    bool internal constant QUOTE_IS_CURRENCY0 = false;
 
     function setUp() public virtual {
         validatorSigner = vm.addr(VALIDATOR_PK);
@@ -67,7 +73,7 @@ abstract contract IndentureTest is Deployers {
         policy = new MandatePolicy(fundOwner, address(hook), validatorSigner);
 
         vm.prank(fundOwner);
-        policy.amend(MANDATE_HASH, MAX_POSITION_BPS, MIN_CASH_BPS, MAX_TRADE_NOTIONAL, MAX_DAILY_NOTIONAL);
+        policy.amend(MANDATE_HASH, MAX_POSITION_BPS, MIN_CASH_BPS, MAX_TRADE_NOTIONAL, MAX_DAILY_NOTIONAL, QUOTE_IS_CURRENCY0);
 
         (poolKey,) = initPoolAndAddLiquidity(currency0, currency1, IHooks(address(hook)), 3000, SQRT_PRICE_1_1);
         poolId = poolKey.toId();
@@ -76,6 +82,9 @@ abstract contract IndentureTest is Deployers {
         hook.setPolicy(poolId, policy);
 
         vault = new IndentureVault(fundOwner, manager, fundManager);
+
+        vm.prank(fundOwner);
+        policy.setVault(address(vault));
 
         // Fund the vault on both sides so either direction can settle.
         deal(Currency.unwrap(currency0), address(vault), 1_000_000e18);
