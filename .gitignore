@@ -13,7 +13,12 @@ out/
 contracts/cache/
 contracts/out/
 contracts/broadcast/**/dry-run/
+# anvil rehearsal receipts; real testnet broadcasts (chain 296) stay tracked
+contracts/broadcast/**/31337/
 contracts/foundry.lock
+# local anvil rehearsal artefacts; the committed deployments.json is testnet
+contracts/deployments.local.json
+contracts/mandate.compiled.json
 
 # env / secrets
 .env
@@ -35,3 +40,5 @@ coverage/
 
 # tsc incremental cache
 *.tsbuildinfo
+contracts/deployments.local.json
+contracts/mandate.compiled.json

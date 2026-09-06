@@ -51,6 +51,26 @@ deploy-vault: ## STEP 5: deploy IndentureVault router
 wire: ## Register policies, set validator signer, init pool
 	cd contracts && forge script script/04_Wire.s.sol --rpc-url $${HEDERA_RPC_URL} --broadcast --slow
 
+# --- Local rehearsal (free) ------------------------------------------------
+# Runs the ENTIRE testnet deploy sequence against anvil, writing to
+# deployments.local.json instead of the committed file. Do this before every
+# real deploy: on Hedera a mistake costs scarce testnet HBAR, and every failure
+# mode here (mis-mined hook address, wrong deploy order, a mandate hash that
+# does not match the YAML) shows up identically on anvil for nothing.
+#
+# Needs `make anvil` running in another shell.
+ANVIL_KEY0 := 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+ANVIL_ADDR1 := 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+ANVIL_ADDR0 := 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+
+mandate-compile: ## Compile the mandate YAML into contracts/mandate.compiled.json
+	npm run --silent compile -w @indenture/mandate -- mandates/fund-one.yaml 		| sed -n '/^{/,$$p' > contracts/mandate.compiled.json
+
+deploy-local: mandate-compile ## Rehearse the full deploy against anvil (free)
+	cp contracts/deployments.json contracts/deployments.local.json
+	cd contracts && 	  DEPLOYMENTS_PATH=./deployments.local.json 	  DEPLOYER_KEY=$(ANVIL_KEY0) 	  MANAGER_ADDRESS=$(ANVIL_ADDR1) 	  VALIDATOR_ADDRESS=$(ANVIL_ADDR0) 	  sh -c 'for s in 01_PoolManager 02_Hook 03_Vault 04_Wire; do 	    forge script script/$$s.s.sol --rpc-url http://127.0.0.1:8545 --broadcast || exit 1; done'
+	@echo "Rehearsal complete. See contracts/deployments.local.json"
+
 # --- Services ---
 validator-dev: ## Run the Validator worker locally on :8787
 	npm run dev -w @indenture/validator
