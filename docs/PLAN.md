@@ -18,7 +18,7 @@ Findings driving this plan are in [RESEARCH.md](RESEARCH.md).
 |---|---|---|---|
 | 0 | Toolchain | clean clone builds + tests | ✅ done |
 | 1 | On-chain spine | `Router.t.sol`, `Replay.t.sol`, sig/binding half of `Mandate.t.sol` green | ✅ done |
-| 2 | Covenants enforced | `Mandate.t.sol` + `Adversarial.t.sol` fully green | ⬜ |
+| 2 | Covenants enforced | `Mandate.t.sol` + `Adversarial.t.sol` fully green | ✅ done |
 | 3 | Compliance | `Compliance.t.sol` green | ⬜ |
 | 4 | Real data | Validator + journaler off mocks, `mock-status.md` rows 3–8 closed | ⬜ |
 | 5 | Testnet | `deployments.json` fully populated, one real trade | ⬜ |
@@ -124,8 +124,21 @@ answer and costs one more field.
 | 2.5 | Adversarial harness: `npm run inject "<attack>"` + 3 named injections |
 | 2.6 | Unprotected control vault that loses money on purpose (the contrast shot) |
 
-**Exit:** `Mandate.t.sol` 11/11, `Adversarial.t.sol` green. Every named revert
-error has its own test — that is a stated project rule.
+**Exit:** ✅ **51 passed, 0 failed, 4 skipped.** `Mandate.t.sol` 21/21,
+`Adversarial.t.sol` 7/7. Only `Compliance.t.sol` (Sprint 3) is still skipped.
+
+**The design decision in 2.1 went the other way, and the plan was wrong.**
+Binding a Validator-signed snapshot into the receipt defends against nothing: a
+compromised Validator would sign a flattering snapshot. The covenants that
+actually survive a compromised Validator are the ones needing no snapshot —
+the two size caps, checked in `afterSwap` against the settled quote delta. The
+receipt struct was left alone, so the frozen seam never broke. Full reasoning
+and the resulting strength table are in RESEARCH §2.3.
+
+Still open from this sprint: 2.5 (`npm run inject` harness) and 2.6 (the
+unprotected control vault) are demo-surface work, not enforcement, and are
+better done alongside Sprint 7. The on-chain half — which is what those attacks
+exercise — is covered by `Adversarial.t.sol`.
 
 ---
 

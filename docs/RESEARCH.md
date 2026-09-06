@@ -117,7 +117,7 @@ signatures are not v4's. `PoolManager` would never call it.
 Until this is a real `BaseHook`, **none** of the "final on-chain re-check"
 claim is backed by code.
 
-### 2.3 `MandatePolicy` does not check any covenant
+### 2.3 `MandatePolicy` does not check any covenant — FIXED (Sprint 2), with a correction to the claim
 
 Step 3 of `beforeSwap` is a comment:
 
@@ -129,6 +129,39 @@ So today a valid Validator signature authorises **any** trade of any size. The
 headline claim — "even a compromised Validator signature cannot move funds
 outside the mandate" — is currently false. This is the single largest gap between
 the pitch and the code, and it is what Sprint 2 exists to close.
+
+**Resolved, but the claim needs splitting.** Design rule 4 forbids the hook from
+reading an oracle. Two of the four covenants are weights against NAV, and NAV
+cannot be computed without prices. So the four covenants are not equally strong,
+and saying they are would be the kind of claim that falls apart under a
+reviewer's first question:
+
+| Covenant | Where | Strength |
+|---|---|---|
+| `maxTradeNotional` | `MandatePolicy.afterSwap` | **Unconditional.** Reads only the settled quote-currency delta and this contract's own storage. No price, no balance, no external call. Holds against a stolen Validator key. |
+| `maxDailyNotional` | `MandatePolicy.afterSwap` | **Unconditional**, same basis. Rolling window kept as two fixed-width day-bucket slots — no mapping growth, no loop. |
+| `maxPositionBps` | Validator, + `observeSnapshot` on chain | **Detection.** Needs prices. Enforced off-chain; on chain it emits `BreachObserved` and freezes the share class. |
+| `minCashBps` | Validator, + `observeSnapshot` on chain | **Detection**, same basis. |
+
+Two decisions made this work:
+
+1. **Enforce in `afterSwap`, not `beforeSwap`.** `params.amountSpecified` is
+   denominated in whichever currency the caller picked, and for an exact-output
+   trade the amount that actually moves is unknown until the swap has run.
+   `afterSwap` gets the settled deltas, so the quote amount there is the real one
+   — and a revert in `afterSwap` still unwinds the whole `unlock`, so this is
+   prevention, not merely observation.
+2. **Do not put a portfolio snapshot in the receipt.** The obvious design is to
+   have the Validator sign a snapshot and the hook check it. That defends against
+   nothing: a compromised Validator would simply sign a flattering snapshot. The
+   covenants that survive a compromised Validator are exactly the ones that need
+   no snapshot at all. Leaving the receipt struct alone also kept the frozen
+   `packages/receipt` seam intact.
+
+`shared-contracts/contract-events.md` already named the event `BreachObserved`
+and described it as fired "when a post-trade covenant snapshot is out of bounds"
+— the original design was right about this, and the split above makes the code
+match the words.
 
 ### 2.4 The `paramsHash` binding will revert every real swap as written — FIXED (Sprint 1)
 
