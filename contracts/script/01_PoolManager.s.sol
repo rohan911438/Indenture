@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
 
 /// STEP 1 of the build order and the single biggest unknown: get the
 /// unmodified Uniswap v4-core PoolManager onto Hedera testnet with
-/// evm_version=cancun / solc 0.8.28. Deploy ONCE, pin in deployments.json,
+/// evm_version=cancun / solc 0.8.26. Deploy ONCE, pin in deployments.json,
 /// never redeploy (testnet HBAR is the one scarce resource).
 ///
 /// Run a gas estimate WITHOUT --broadcast first.

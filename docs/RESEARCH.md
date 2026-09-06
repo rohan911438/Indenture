@@ -107,7 +107,7 @@ mandate, default `90000` (heartbeat + 1000s margin). The Validator reads it from
 the mandate like everything else. It is *not* an on-chain covenant — staleness
 judgement stays off-chain per design rule 4, so `MandatePolicy` is unaffected.
 
-### 2.2 `PolicyHook` is not a hook
+### 2.2 `PolicyHook` is not a hook — FIXED (Sprint 1)
 
 `PolicyHook` today is a `mapping(bytes32 => IPolicy)` plus an `internal`
 `_beforeSwap` that nothing calls. It does not extend `BaseHook`, does not
@@ -130,7 +130,7 @@ headline claim — "even a compromised Validator signature cannot move funds
 outside the mandate" — is currently false. This is the single largest gap between
 the pitch and the code, and it is what Sprint 2 exists to close.
 
-### 2.4 The `paramsHash` binding will revert every real swap as written
+### 2.4 The `paramsHash` binding will revert every real swap as written — FIXED (Sprint 1)
 
 The Validator computes:
 
@@ -152,7 +152,12 @@ an offset/length prefix, or the struct ever gains a field, every swap reverts
 test that swaps through a real `PoolManager`, not a unit test — a unit test that
 encodes the params itself would pass while production reverted.
 
-### 2.5 `IPolicy.beforeSwap` has the wrong return shape
+**Done.** `packages/receipt/vectors/params.json` holds hashes produced by the
+TypeScript signer; `Receipt.t.sol::test_ParamsHashMatchesTypescript` asserts
+Solidity reproduces them from `IPoolManager.SwapParams`. `Router.t.sol` then
+swaps through a real `PoolManager` end to end.
+
+### 2.5 `IPolicy.beforeSwap` has the wrong return shape — FIXED (Sprint 1)
 
 v4's `IHooks.beforeSwap` returns `(bytes4, BeforeSwapDelta, uint24)`.
 `IPolicy.beforeSwap` returns only `bytes4`. The interface must widen (or
@@ -204,7 +209,7 @@ formality, it is where the mocks meet reality.
 
 | Risk | Why it matters | Mitigation |
 |---|---|---|
-| `PoolManager` bytecode vs Hedera's 24,576-byte EIP-170 limit | Hedera enforces the same limit as Ethereum. v4's `PoolManager` sits close to the ceiling. If it does not fit, the whole design needs a different AMM. | `forge build --sizes` is already in CI — add an assertion, and deploy `PoolManager` to testnet **first** (README build order step 1 already says this, for exactly this reason). |
+| ~~`PoolManager` vs Hedera's 24,576-byte limit~~ **MEASURED: fits, with 567 bytes to spare** | `forge build --sizes` reports `PoolManager` at **24,009 bytes runtime**. It fits, but the margin is 2.3%. It is also sensitive to compiler settings: v4-core requires `optimizer_runs = 44444444` (at 800 the via-IR pipeline fails with stack-too-deep in `Pool.sol`), and changing that number would move the size. | Treat `optimizer_runs` as fixed while v4-core is a dependency — `foundry.toml` says so. `forge build --sizes` exits non-zero over the limit and already runs in CI, so a regression fails the build. |
 | HashIO public relay rate limits + `eth_getLogs` range caps | The journaler polls contract logs. If ranges are capped, the cursor logic needs smaller windows. | Journaler already has a cursor. Test against the real relay in Sprint 5; fall back to mirror-node REST for logs, which the architecture already prefers. |
 | Testnet HBAR | Named in the README as the one scarce resource. | Never redeploy `PoolManager`; estimate gas without `--broadcast` first; refill daily. |
 | ATS SDK deploy is not offline-testable | It talks to a real network. | Keep `CompliancePolicy` behind the two-view-function interface it already has, so the rest of the system tests against mocks. |

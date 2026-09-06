@@ -17,7 +17,7 @@ Findings driving this plan are in [RESEARCH.md](RESEARCH.md).
 | Sprint | Theme | Exit criterion | State |
 |---|---|---|---|
 | 0 | Toolchain | clean clone builds + tests | ✅ done |
-| 1 | On-chain spine | `Router.t.sol`, `Replay.t.sol`, sig/binding half of `Mandate.t.sol` green | ⬜ |
+| 1 | On-chain spine | `Router.t.sol`, `Replay.t.sol`, sig/binding half of `Mandate.t.sol` green | ✅ done |
 | 2 | Covenants enforced | `Mandate.t.sol` + `Adversarial.t.sol` fully green | ⬜ |
 | 3 | Compliance | `Compliance.t.sol` green | ⬜ |
 | 4 | Real data | Validator + journaler off mocks, `mock-status.md` rows 3–8 closed | ⬜ |
@@ -66,12 +66,28 @@ proven correct by going through a live `PoolManager`.
 | 1.5 | `IndentureVault` router | `unlock` / `unlockCallback` / `swap` / `sync` / `settle` / `take`; emits `Executed`; `onlyManager` on `trade()`; `emergencyExit` outside all policy |
 | 1.6 | Un-skip `Router.t.sol` (6), `Replay.t.sol` (3), and the sig/binding tests in `Mandate.t.sol` (5) | |
 
-**Exit:** `forge test` = 19 passed, 15 skipped. The 15 remaining are the 4
-covenant tests, `Amend_OnlyOwner`, `Adversarial.t.sol`, and `Compliance.t.sol`.
+**Exit:** ✅ **32 passed, 0 failed, 13 skipped** (target was 19). The 13
+remaining are the 4 covenant tests, `Adversarial.t.sol` and `Compliance.t.sol`.
 
-**Watch for:** the `paramsHash` equality is the risky one. Assert it explicitly
-in `Router.t.sol` against a receipt signed by the *TypeScript* signer, not one
-re-encoded in Solidity — otherwise the test proves nothing (§2.4).
+What landed beyond the plan:
+
+- `src/base/BaseHook.sol` — hand-written, because v4-periphery deleted its
+  `BaseHook` (#510) and has no upstream tags to pin. v4-periphery was dropped
+  from the dependency set entirely; nothing imported it.
+- `src/libs/HookMiner.sol` + `Hook.t.sol` (5 tests) — proves a mined address is
+  accepted by a real `PoolManager` before any deploy spends testnet HBAR. It
+  immediately caught a real mistake: mining against the wrong deployer address.
+- `MandatePolicy` gained `NotPolicyHook`, `StaleMandate` and `WrongPool`. The
+  first closes a hole where anyone could present a receipt directly to the
+  policy and burn the vault's sequence number without a swap. The other two
+  split failures that were previously both reported as `ParamsMismatch`.
+- The EIP-712 domain separator is now computed in the `MandatePolicy`
+  constructor instead of being passed in, so a deploy script cannot bind
+  receipts to the wrong verifying contract.
+- `solc` moved 0.8.28 → 0.8.26 and `optimizer_runs` 800 → 44444444, both forced
+  by v4-core. See RESEARCH §3.
+
+**Watch for:** ~~the `paramsHash` equality~~ — closed, see RESEARCH §2.4.
 
 ---
 

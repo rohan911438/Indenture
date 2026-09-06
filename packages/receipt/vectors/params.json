@@ -1,0 +1,21 @@
+{
+  "$comment": "paramsHash vectors: keccak256(abi.encode(bool,int256,uint160)) as computed by packages/receipt/src/sign.ts. Solidity must reproduce these with keccak256(abi.encode(IPoolManager.SwapParams)). Guarded by contracts/test/Receipt.t.sol::test_ParamsHashMatchesTypescript. Chain-independent - no domain is involved.",
+  "cases": [
+    {
+      "swapParams": {
+        "zeroForOne": true,
+        "amountSpecified": "-1000000",
+        "sqrtPriceLimitX96": "4295128740"
+      },
+      "paramsHash": "0x7329e904e560f1014b68f440b908659211c4b06bf3816a082a7c452ee1558353"
+    },
+    {
+      "swapParams": {
+        "zeroForOne": false,
+        "amountSpecified": "40000000000",
+        "sqrtPriceLimitX96": "1461446703485210103287273052203988822378723970341"
+      },
+      "paramsHash": "0xc756ce68a31c665543b80ad7c675dd187f2056371c1299554f0370f25bb377be"
+    }
+  ]
+}
