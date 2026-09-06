@@ -19,7 +19,7 @@ Findings driving this plan are in [RESEARCH.md](RESEARCH.md).
 | 0 | Toolchain | clean clone builds + tests | ✅ done |
 | 1 | On-chain spine | `Router.t.sol`, `Replay.t.sol`, sig/binding half of `Mandate.t.sol` green | ✅ done |
 | 2 | Covenants enforced | `Mandate.t.sol` + `Adversarial.t.sol` fully green | ✅ done |
-| 3 | Compliance | `Compliance.t.sol` green | ⬜ |
+| 3 | Compliance | `Compliance.t.sol` green | ✅ done (3.2 deferred to Sprint 5) |
 | 4 | Real data | Validator + journaler off mocks, `mock-status.md` rows 3–8 closed | ⬜ |
 | 5 | Testnet | `deployments.json` fully populated, one real trade | ⬜ |
 | 6 | Frontend live | `lib/data.ts` reads chain, 4 routes render real data | ⬜ |
@@ -151,12 +151,16 @@ exercise — is covered by `Adversarial.t.sol`.
 | 3.3 | `MandateComplianceModule.canTransfer()` reads `MandatePolicy.inBreach()` — a portfolio breach freezes the share class |
 | 3.4 | Un-skip `Compliance.t.sol` (4) |
 
-**Exit:** `forge test` fully green, 34/34. This sprint alone qualifies for the
-Hedera track.
+**Exit:** ✅ **58 passed, 0 failed, 0 skipped.** Every one of the 29 originally
+skipped tests is implemented, plus 29 more.
 
-**Note:** 3.2 needs a real network — it is the first task that cannot be done
-offline. Keep it isolated behind the two view functions so nothing else blocks
-on it.
+3.2 (the real ATS deploy) is **deferred to Sprint 5**, where the rest of the
+network work lives. It is the only task in the plan that cannot run offline, and
+isolating it behind `IIdentityRegistry` / `IModularCompliance` — two view
+functions — is what let the other three tasks finish without it. The mocks in
+`Compliance.t.sol` implement those two functions and drive the *real*
+`MandateComplianceModule`, so the breach cross-link is exercised rather than
+assumed.
 
 ---
 
