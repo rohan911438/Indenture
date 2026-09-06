@@ -68,6 +68,7 @@ app.get("/mandate", async (c) => {
       minCashBps: Number(m.limits.minCashBps),
       maxTradeNotional: m.limits.maxTradeNotional.toString(),
       maxDailyNotional: m.limits.maxDailyNotional.toString(),
+      feedStaleAfterSec: m.feedStaleAfterSec,
     },
   });
 });
@@ -108,17 +109,11 @@ app.post("/validate", async (c) => {
     return c.json({ decision: "REFUSED", reason, detail, journal });
   };
 
-  // --- single-flight nonce lock (Workers KV, TTL = receipt TTL) ------------
-  const lockKey = `nonce:${binding.vault}:${binding.seq}`;
-  if (c.env.CACHE) {
-    const held = await c.env.CACHE.get(lockKey);
-    if (held) {
-      return refuse("nonce in flight", { seq: Number(binding.seq), lockKey });
-    }
-    await c.env.CACHE.put(lockKey, "1", { expirationTtl: RECEIPT_TTL_SEC });
-  }
-
   // --- covenants ---------------------------------------------------------
+  // Checked BEFORE the nonce lock is taken. Taking the lock first meant a
+  // refused proposal held the nonce for the full 120s TTL, so one bad
+  // proposal blocked the next legitimate one — during a demo that fires an
+  // attack and then a good trade, that reads as the system breaking.
   const inputs = await src.covenantInputs(req, m);
   const checks = runCovenantChecks(inputs);
   if (!checks.ok) {
@@ -126,6 +121,23 @@ app.post("/validate", async (c) => {
       covenant: checks.covenant,
       ...checks.detail,
     });
+  }
+
+  // --- single-flight nonce lock ------------------------------------------
+  // Best-effort only, and deliberately so. Workers KV has no compare-and-set,
+  // so two concurrent requests can both read empty and both sign for the same
+  // seq. That is not a fund-safety problem: MandatePolicy.seqOf is the real
+  // anti-replay boundary and only one of them can ever land on chain. This
+  // lock exists to keep the JOURNAL clean — two signed receipts for one nonce
+  // is exactly the kind of thing the journal is supposed to make unambiguous.
+  // Do not mistake it for a security control.
+  const lockKey = `nonce:${binding.vault}:${binding.seq}`;
+  if (c.env.CACHE) {
+    const held = await c.env.CACHE.get(lockKey);
+    if (held) {
+      return refuse("nonce in flight", { seq: Number(binding.seq), lockKey });
+    }
+    await c.env.CACHE.put(lockKey, "1", { expirationTtl: RECEIPT_TTL_SEC });
   }
 
   // --- sign ------------------------------------------------------------

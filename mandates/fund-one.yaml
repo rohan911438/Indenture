@@ -18,6 +18,11 @@ covenants:
   minCashBps: 1000            # keep at least 10% in the quote currency
   maxTradeNotional: "250000000000"     # 250,000 USDC (6dp) per trade
   maxDailyNotional: "1000000000000"    # 1,000,000 USDC (6dp) rolling 24h
+  # A price feed older than this and the Validator refuses to sign. MUST be >=
+  # the feed heartbeat: Chainlink's Hedera feeds beat every 86400s, so anything
+  # below that refuses healthy feeds and bricks the fund. See docs/RESEARCH.md
+  # section 2.1. Judged off-chain only - the hook never sees it.
+  feedStaleAfterSec: 90000             # 86400s heartbeat + margin
 
 universe:
   - "0x00000000000000000000000000000000000000d0"   # asset A (mock)

@@ -73,6 +73,30 @@ describe("runCovenantChecks", () => {
     if (!r.ok) expect(r.covenant).toBe("minCashBps");
   });
 
+  // Regression: docs/RESEARCH.md section 2.1. Chainlink's Hedera feeds beat
+  // every 86400s, so a feed can legitimately be a full day old. The tolerance
+  // used to be a hardcoded 3600s, and staleness is the FIRST check, so the
+  // Validator would have refused nearly every proposal for a healthy feed —
+  // a failure that only appears once the mocks come out.
+  it("accepts a feed that is one full Chainlink heartbeat old", () => {
+    const r = runCovenantChecks({
+      ...base,
+      oldestFeedAgeSec: 86_400,
+      feedStaleAfterSec: 90_000, // the mandate's value
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("still refuses a feed past the mandate's tolerance", () => {
+    const r = runCovenantChecks({
+      ...base,
+      oldestFeedAgeSec: 90_001,
+      feedStaleAfterSec: 90_000,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.covenant).toBe("feedStaleness");
+  });
+
   it("is deterministic", () => {
     expect(runCovenantChecks(base)).toEqual(runCovenantChecks(base));
   });
