@@ -21,7 +21,7 @@ Findings driving this plan are in [RESEARCH.md](RESEARCH.md).
 | 2 | Covenants enforced | `Mandate.t.sol` + `Adversarial.t.sol` fully green | ✅ done |
 | 3 | Compliance | `Compliance.t.sol` green | ✅ done (3.2 deferred to Sprint 5) |
 | 4 | Real data | Validator + journaler off mocks, `mock-status.md` rows 3–8 closed | 🟡 4.1–4.2 done; 4.3–4.7 need testnet |
-| 5 | Testnet | `deployments.json` fully populated, one real trade | ⬜ |
+| 5 | Testnet | `deployments.json` fully populated, one real trade | 🟡 scripts written + rehearsed on anvil; needs credentials |
 | 6 | Frontend live | `lib/data.ts` reads chain, 4 routes render real data | ⬜ |
 | 7 | Demo | injection → refusal → journal, on testnet, repeatable | ⬜ |
 
@@ -198,13 +198,28 @@ every real deploy. **Never redeploy `PoolManager`.**
 
 | # | Task |
 |---|---|
-| 5.1 | Deploy `PoolManager` — **do this first**, it is the biggest unknown; confirms the 24KB question (RESEARCH §3) |
+| 5.0 | ✅ **All four deploy scripts written and rehearsed end to end on anvil** (`make deploy-local`, free). PoolManager → mined hook → vault + policy → wire. Verified on chain: hook address low bits `0xC0`, policy registered for the pool, `mandateHash` equal to the compiled YAML, covenants amended, vault and validator signer set |
+| 5.1 | Deploy `PoolManager` — **do this first**, it is the biggest unknown; ~~confirms the 24KB question~~ already measured at 24,009/24,576 (RESEARCH §3) |
 | 5.2 | Create both HCS topics; write ids to `deployments.json` |
 | 5.3 | Deploy `MockUSDC`, mine + deploy `PolicyHook`, `CompliancePolicy`, `MandatePolicy`, `IndentureVault` |
 | 5.4 | `04_Wire.s.sol`: register policies, set validator signer, init pool, seed liquidity |
 | 5.5 | Regenerate `mandates/fund-one.yaml` from `deployments.json`; compile; `amend()`; publish `MANDATE` envelope |
 | 5.6 | Deploy the Validator Worker; `wrangler secret put VALIDATOR_KEY`; real KV namespace ids |
 | 5.7 | One real end-to-end trade: proposal → receipt → vault → swap → `Executed` → journal |
+
+**Blocked on credentials.** Everything here that can be done without a funded
+account is done. What is still needed, and only the repo owner can supply it:
+
+| Secret | For | Where it goes |
+|---|---|---|
+| `HEDERA_OPERATOR_ID` / `_KEY` | pays for deploys + HCS topic creation | `.env`, GitHub secret |
+| funded testnet HBAR | the one scarce resource | the operator account |
+| Cloudflare account + KV namespace ids | the Validator Worker | `wrangler.toml`, `wrangler secret put VALIDATOR_KEY` |
+| `MANAGER_KEY` | the untrusted proposer | GitHub secret |
+| `LLM_API_KEY` (optional) | `LlmProposer`; `RuleProposer` is the offline default | `.env` |
+
+`make deploy-local` is the rehearsal for all of it and costs nothing. Run it
+before spending any HBAR.
 
 **Exit:** `deployments.json` has no empty strings, and one trade is visible on
 HashScan and on the journal topic.

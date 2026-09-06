@@ -14,7 +14,14 @@ optimizer = true
 optimizer_runs = 44444444
 via_ir = true
 bytecode_hash = "none"
-fs_permissions = [{ access = "read-write", path = "./deployments.json" }]
+fs_permissions = [
+  { access = "read-write", path = "./deployments.json" },
+  # the free anvil rehearsal target; never the testnet source of truth
+  { access = "read-write", path = "./deployments.local.json" },
+  # written by `make mandate-compile`; the hash the on-chain covenants are
+  # amended to must come from the YAML, not be retyped into a script
+  { access = "read", path = "./mandate.compiled.json" },
+]
 ffi = false
 
 remappings = [
