@@ -37,9 +37,16 @@ contract DeployVault is Deployments {
         MandatePolicy policy = new MandatePolicy(owner, policyHook, validatorSigner);
         policy.setVault(address(vault));
 
-        // Seed the fund so it can actually trade.
-        usdc.mint(address(vault), 1_000_000e6);
-        asset.mint(address(vault), 1_000_000e18);
+        // Seed the fund INSIDE its own mandate. At $1 per asset token this is
+        // NAV 1,000,000 with the asset at 2500bps and cash at 7500bps, against
+        // a 3000bps position cap and a 1000bps cash floor.
+        //
+        // Seeding 50/50 would put the fund in breach of maxPositionBps from
+        // block one, and every buy would be refused before it could demo
+        // anything. A fund that starts outside its own covenants is not a
+        // useful starting state.
+        usdc.mint(address(vault), 750_000e6);
+        asset.mint(address(vault), 250_000e18);
 
         vm.stopBroadcast();
 

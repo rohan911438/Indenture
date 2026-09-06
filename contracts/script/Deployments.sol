@@ -42,6 +42,18 @@ abstract contract Deployments is Script {
         return vm.parseAddress(raw);
     }
 
+    /// @dev "Already deployed" means there is CODE at the recorded address, not
+    ///      merely that the slot is non-empty. forge script runs `vm.writeJson`
+    ///      during SIMULATION, so a run that reverts before broadcasting still
+    ///      leaves an address in the file. Trusting the slot alone made a failed
+    ///      run skip a deploy on the retry and leave the field pointing at a
+    ///      contract that was never deployed — caught by the anvil rehearsal,
+    ///      which is what it is for.
+    function _readDeployed(string memory key) internal view returns (address) {
+        address a = _readAddr(key);
+        return a.code.length > 0 ? a : address(0);
+    }
+
     function _requireAddr(string memory key) internal view returns (address a) {
         a = _readAddr(key);
         if (a == address(0)) {

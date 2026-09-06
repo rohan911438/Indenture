@@ -19,7 +19,7 @@ import {PoolManager} from "v4-core/PoolManager.sol";
 /// Run a gas estimate WITHOUT --broadcast first.
 contract DeployPoolManager is Deployments {
     function run() external {
-        address existing = _readAddr(".contracts.PoolManager");
+        address existing = _readDeployed(".contracts.PoolManager");
         if (existing != address(0)) {
             console2.log("PoolManager already deployed at", existing);
             console2.log("Refusing to redeploy. Clear the field by hand if you really mean to.");

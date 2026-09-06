@@ -26,7 +26,7 @@ contract DeployHook is Deployments {
     function run() external {
         address poolManager = _requireAddr(".contracts.PoolManager");
 
-        address existing = _readAddr(".contracts.PolicyHook");
+        address existing = _readDeployed(".contracts.PolicyHook");
         if (existing != address(0)) {
             console2.log("PolicyHook already deployed at", existing);
             return;
