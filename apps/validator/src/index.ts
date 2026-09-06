@@ -6,6 +6,8 @@ import { makeEnvelope } from "@indenture/hedera/envelope";
 import { validateRequestSchema } from "./schema.js";
 import { runCovenantChecks } from "./checks.js";
 import { MockSources, paramsHashOf, type Sources } from "./sources.js";
+import { MirrorSources, mirrorConfigFrom } from "./mirror-sources.js";
+import deployments from "../../../contracts/deployments.json";
 
 type Bindings = {
   VALIDATOR_KEY: string; // wrangler secret
@@ -19,9 +21,24 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 const RECEIPT_TTL_SEC = 120;
 
-/** Swap this for MirrorSources when the real derivation lands (build step 7). */
-function sourcesFor(_env: Bindings): Sources {
-  return new MockSources();
+/**
+ * THE seam (mock-status.md row 3). MirrorSources the moment deployments.json
+ * is populated; MockSources until then.
+ *
+ * The switch is on the DATA, not on an env flag, deliberately: a flag can be
+ * set wrong in one environment and leave the Validator quietly deciding on
+ * fixture numbers against a real fund. If the addresses are not there, there is
+ * genuinely nothing to read, and saying so is honest. If they are there, there
+ * is no reason to prefer a mock.
+ */
+function sourcesFor(env: Bindings): Sources {
+  const cfg = mirrorConfigFrom(deployments);
+  if (!cfg) return new MockSources();
+  return new MirrorSources({
+    ...cfg,
+    rpcUrl: env.HEDERA_RPC_URL || cfg.rpcUrl,
+    mirrorUrl: env.HEDERA_MIRROR_URL || cfg.mirrorUrl,
+  });
 }
 
 // --------------------------------------------------------------------------
