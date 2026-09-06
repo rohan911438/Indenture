@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 /// @title  ReceiptLib
 /// @notice The on-chain half of the receipt seam. The EIP-712 struct here MUST

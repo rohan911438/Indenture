@@ -4,10 +4,14 @@ out = "out"
 libs = ["lib"]
 test = "test"
 script = "script"
-solc_version = "0.8.28"
+solc_version = "0.8.26"          # forced: v4-core PoolManager.sol pins =0.8.26
 evm_version = "cancun"          # Uniswap v4 needs transient storage
 optimizer = true
-optimizer_runs = 800
+# Must match v4-core's own setting. At 800 the via-IR pipeline hits
+# "Variable memPtr_1 is 1 too deep in the stack" compiling v4-core Pool.sol —
+# the inlining decisions at very high runs are what keep that function within
+# stack limits. This is not a tuning knob while v4-core is a dependency.
+optimizer_runs = 44444444
 via_ir = true
 bytecode_hash = "none"
 fs_permissions = [{ access = "read-write", path = "./deployments.json" }]
@@ -17,11 +21,8 @@ remappings = [
   "forge-std/=lib/forge-std/src/",
   "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
   "@uniswap/v4-core/=lib/v4-core/",
-  "@uniswap/v4-periphery/=lib/v4-periphery/",
   "v4-core/=lib/v4-core/src/",
-  "v4-periphery/=lib/v4-periphery/src/",
   "solmate/=lib/v4-core/lib/solmate/",
-  "permit2/=lib/v4-periphery/lib/permit2/",
 ]
 
 [profile.ci]

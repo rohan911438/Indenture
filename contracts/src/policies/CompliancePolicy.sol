@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.26;
 
 import {IPolicy} from "../interfaces/IPolicy.sol";
+import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
+import {PoolKey} from "v4-core/types/PoolKey.sol";
+import {PoolId} from "v4-core/types/PoolId.sol";
 
 /// @notice Minimal ERC-3643 surface we depend on. Provided by the ATS suite
 ///         (deployed via the hashgraph/asset-tokenization-sdk - NOT hand-rolled).
@@ -35,24 +38,25 @@ contract CompliancePolicy is IPolicy {
         compliance = _compliance;
     }
 
-    function beforeSwap(address sender, bytes calldata, bytes calldata, bytes calldata)
-        external
-        view
-        override
-        returns (bytes4)
-    {
+    function beforeSwap(
+        address sender,
+        PoolId,
+        PoolKey calldata,
+        IPoolManager.SwapParams calldata,
+        bytes calldata
+    ) external view override returns (bytes4) {
         if (!identityRegistry.isVerified(sender)) revert NotVerified(sender);
-        // amount / counterparty extraction from params is wired in on step 4
-        return this.beforeSwap.selector;
+        // amount / counterparty extraction from params is wired in on Sprint 3
+        return IPolicy.beforeSwap.selector;
     }
 
-    function afterSwap(address, bytes calldata, bytes calldata, int256, int256)
+    function afterSwap(address, PoolId, PoolKey calldata, IPoolManager.SwapParams calldata, int128, int128)
         external
         pure
         override
         returns (bytes4)
     {
-        return this.afterSwap.selector;
+        return IPolicy.afterSwap.selector;
     }
 
     function inBreach() external pure override returns (bool) {
