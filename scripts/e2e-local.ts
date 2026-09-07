@@ -10,9 +10,10 @@
  * being accepted by the Solidity policy. That is the join most likely to be
  * subtly wrong and the last thing to find out about on testnet.
  *
- * Scenario 7 extends that to the accounting the two sides share: the window
- * the Validator measures against and the window the hook enforces have to be
- * the same one, and only a live chain can show that they are.
+ * Scenarios 7 and 8 extend that to the prospectus: the numbers the web app
+ * puts on screen are read here from the same chain and checked against what
+ * the trade actually did. A dashboard that disagrees with the contract is a
+ * worse failure than one that is simply down.
  *
  * Prerequisites: anvil running, and the deploy scripts + 05_Liquidity run
  * against it (see docs/PLAN.md Sprint 5.0).
@@ -25,6 +26,13 @@ import { privateKeyToAccount } from "viem/accounts";
 import app from "../apps/validator/src/index.js";
 import { encodeReceiptBlob } from "../apps/manager/src/context.js";
 import { submitTrade } from "../apps/manager/src/trade.js";
+import {
+  liveCovenants,
+  liveValuation,
+  weightBps,
+  type ChainConfig,
+} from "../apps/web/lib/live.js";
+import { compileMandate } from "@indenture/mandate";
 
 const RPC = process.env.RPC_URL ?? "http://127.0.0.1:8545";
 const CHAIN_ID = 31337; // anvil. MandatePolicy binds the domain to block.chainid.
@@ -282,7 +290,69 @@ async function main() {
     throw new Error("the day bucket is not stamped with the chain's current day");
   }
 
-  console.log("\nAll seven scenarios behaved as specified.\n");
+  // --- 8. the prospectus reads the same fund -------------------------------
+  // apps/web renders its gauges from exactly these two functions. Running
+  // them against the live chain is the only way to know the page agrees with
+  // the contract; the unit tests only prove it agrees with a fake.
+  console.log("\n=== 8. web live readers -> expect agreement with the chain ===");
+  const cfg: ChainConfig = {
+    rpcUrl: RPC,
+    mirrorUrl: "http://unused",
+    vault,
+    mandatePolicy: policy,
+    currency0: d.pool.currency0,
+    currency1: d.pool.currency1,
+    quoteIsCurrency0,
+  };
+  const mandate = compileMandate(readFileSync("mandates/fund-one.yaml", "utf8"));
+  const valuation = await liveValuation(
+    cfg,
+    mandate.mandate.priceFeeds,
+    mandate.feedStaleAfterSec,
+  );
+  line("nav (quote units)", valuation.navQuote);
+  line("position bps", weightBps(valuation.positionQuote, valuation.navQuote));
+  line("cash bps", weightBps(valuation.cashQuote, valuation.navQuote));
+
+  const usdcNow = await bal(usdc);
+  if (valuation.cashQuote !== usdcNow) {
+    throw new Error(`page cash ${valuation.cashQuote} != vault balance ${usdcNow}`);
+  }
+  if (valuation.navQuote !== valuation.cashQuote + valuation.positionQuote) {
+    throw new Error("NAV is not cash + position");
+  }
+
+  // The gauges must show the limits the HOOK holds, so a mandate that was
+  // published but never amended shows up as the disagreement it is rather
+  // than rendering a limit nothing enforces.
+  const covenants = await liveCovenants(cfg);
+  line("limit maxTrade", covenants.limits.maxTradeNotional);
+  line("settled today", covenants.dailyNotional);
+  line("largest trade", covenants.largestTrade ?? "(not measured)");
+
+  // anvil has no mirror node, so the per-trade usage genuinely cannot be
+  // read here. It must come back null — a page that turned an unavailable
+  // source into a confident zero would be lying in the one place this
+  // project cannot afford to.
+  if (covenants.largestTrade !== null) {
+    throw new Error("with no mirror node reachable, largestTrade must be null, not a number");
+  }
+  if (covenants.dailyNotional !== daily) {
+    throw new Error("the gauge and the contract disagree about today's notional");
+  }
+  if (covenants.limits.maxTradeNotional !== mandate.covenantArgs.maxTradeNotional) {
+    throw new Error("the hook's limits do not match the compiled mandate — re-run 04_Wire");
+  }
+  if (covenants.inBreach) throw new Error("the fund should not be in breach after one trade");
+
+  const positionBps = weightBps(valuation.positionQuote, valuation.navQuote);
+  if (positionBps > Number(covenants.limits.maxPositionBps)) {
+    throw new Error(
+      `position ${positionBps}bps is over the ${covenants.limits.maxPositionBps}bps cap`,
+    );
+  }
+
+  console.log("\nAll eight scenarios behaved as specified.\n");
 }
 
 main().catch((e) => {
