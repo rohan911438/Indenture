@@ -10,6 +10,10 @@
  * being accepted by the Solidity policy. That is the join most likely to be
  * subtly wrong and the last thing to find out about on testnet.
  *
+ * Scenario 7 extends that to the accounting the two sides share: the window
+ * the Validator measures against and the window the hook enforces have to be
+ * the same one, and only a live chain can show that they are.
+ *
  * Prerequisites: anvil running, and the deploy scripts + 05_Liquidity run
  * against it (see docs/PLAN.md Sprint 5.0).
  *
@@ -82,6 +86,20 @@ async function main() {
   const assetBefore = await bal(asset);
   line("vault USDC", usdcBefore);
   line("vault ASSET", assetBefore);
+
+  // The day bucket is cumulative and this script is meant to be re-runnable
+  // against the same chain, so scenario 7 checks how much it MOVED, not what
+  // it holds. An absolute assertion would pass exactly once.
+  const policy = d.contracts.MandatePolicy as Hex;
+  const policyAbi = parseAbi([
+    "function dailyNotional() view returns (uint256)",
+    "function currentDay() view returns (uint64)",
+  ]);
+  const readPolicy = (functionName: "dailyNotional" | "currentDay") =>
+    pub.readContract({ address: policy, abi: policyAbi, functionName });
+  const dailyBefore = (await readPolicy("dailyNotional")) as bigint;
+  const dayBefore = (await readPolicy("currentDay")) as bigint;
+  line("settled today", dailyBefore);
 
   // --- 1. a compliant trade: buy 1,000 USDC worth of the asset -------------
   // currency1 is the quote here, so spending it means zeroForOne = false, and
@@ -242,7 +260,29 @@ async function main() {
   // Restore, so the script is re-runnable against the same chain.
   await send("setAnswer", 100_000_000n);
 
-  console.log("\nAll six scenarios behaved as specified.\n");
+  // --- 7. the chain's own day bucket recorded the trade --------------------
+  // The Validator's rolling-cap check reads this bucket rather than summing
+  // the journal, so that it and afterSwap measure the same window. If
+  // afterSwap ever stops recording, the Validator silently goes back to
+  // believing the fund has spent nothing today — and signs accordingly.
+  console.log("\n=== 7. MandatePolicy day bucket -> expect the executed notional ===");
+  const daily = (await readPolicy("dailyNotional")) as bigint;
+  const bucketDay = (await readPolicy("currentDay")) as bigint;
+  const block = await pub.getBlock();
+  line("dailyNotional", daily);
+  line("bucket day", `${bucketDay} (chain day ${block.timestamp / 86_400n})`);
+
+  // A day boundary crossed mid-run resets the bucket rather than adding to
+  // it — which is the behaviour under test, not a failure.
+  const expected = bucketDay === dayBefore ? dailyBefore + 1_000_000_000n : 1_000_000_000n;
+  if (daily !== expected) {
+    throw new Error(`expected the 1,000 USDC trade recorded (${expected}), got ${daily}`);
+  }
+  if (BigInt(bucketDay) !== block.timestamp / 86_400n) {
+    throw new Error("the day bucket is not stamped with the chain's current day");
+  }
+
+  console.log("\nAll seven scenarios behaved as specified.\n");
 }
 
 main().catch((e) => {
