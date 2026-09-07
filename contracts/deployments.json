@@ -28,6 +28,10 @@
     "fee": 3000,
     "tickSpacing": 60
   },
+  "services": {
+    "$comment": "Where the deployed Validator answers. Empty means the attack console runs its scripted rehearsal instead of calling a live service, and says so.",
+    "validatorUrl": ""
+  },
   "hcs": {
     "mandateTopicId": "",
     "journalTopicId": ""
