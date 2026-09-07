@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { signReceipt, type Receipt } from "@indenture/receipt";
@@ -18,6 +19,27 @@ type Bindings = {
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
+
+/**
+ * The prospectus is a static site on another origin, and its attack console
+ * calls /validate directly from the browser. Without this the call never
+ * leaves the page.
+ *
+ * A wildcard origin is the honest setting here: every endpoint is public and
+ * read-only from the caller's point of view. /validate signs nothing the
+ * caller chose — the seq comes from MandatePolicy, the mandate from HCS, the
+ * prices from Chainlink — so an origin check would suggest a boundary that
+ * does not exist. The real boundary is the request schema and the chain.
+ */
+app.use(
+  "/*",
+  cors({
+    origin: "*",
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["content-type"],
+    maxAge: 86400,
+  }),
+);
 
 const RECEIPT_TTL_SEC = 120;
 
