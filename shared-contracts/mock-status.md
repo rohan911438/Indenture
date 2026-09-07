@@ -10,7 +10,7 @@ with a mock implementation. This file is the checklist for swapping each one.
 | 2 | `MANAGER_KEY`, `HEDERA_OPERATOR_*`, `ISSUER_KEY` | real testnet keys as GitHub / laptop secrets | `.env` + CI secrets — no code |
 | 3 | ~~`MockSources`~~ **CLOSED** — `MirrorSources` is live and selected automatically once `deployments.json` has addresses | mandate from the mandate HCS topic, vault/pool state via RPC, Chainlink `AggregatorV3` feeds through `@indenture/chainlink` | `apps/validator/src/mirror-sources.ts`; the switch is `sourcesFor()` in `index.ts` |
 | 4 | Mandate YAML is embedded in `apps/validator/src/mandate-fixture.ts` | read the latest `MANDATE` envelope from the mandate HCS topic | `MockSources.mandate()` → `MirrorSources.mandate()` |
-| 5 | Rolling-24h notional = `0` | sum `Executed` notionals from the journal topic over the trailing 24h | `MockSources.covenantInputs()` `priorDailyNotionalQuote` |
+| 5 | ~~Rolling-24h notional = `0`~~ **CLOSED** — read from `MandatePolicy`'s own day bucket (`currentDay` / `dailyNotional`), so the Validator and `afterSwap` measure the same window | — | `MirrorSources.priorDailyNotional()` |
 | 6 | ~~`MockFundStateProvider`~~ **CLOSED** — `MirrorFundStateProvider` reads vault balances + feeds through the same validated reader the Validator uses | — | `apps/manager/src/fund-state.ts` → `stateProvider()` in `index.ts` |
 | 7 | Manager `CONTEXT` is logged, not submitted, unless `HEDERA_OPERATOR_*` set | always submit via the journaler | `apps/manager/src/index.ts` → `submitContext()` |
 | 8 | ~~`console.log`~~ **CLOSED** — `submitTrade()` simulates then writes with `MANAGER_KEY` | — | `apps/manager/src/trade.ts` |
