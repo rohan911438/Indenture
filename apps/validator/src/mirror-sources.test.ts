@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   custom,
   encodeAbiParameters,
+  numberToHex,
   parseAbiParameters,
   toFunctionSelector,
   type Hex,
@@ -27,6 +28,8 @@ const SELECTORS = {
   balanceOf: toFunctionSelector("function balanceOf(address) view returns (uint256)"),
   decimals: toFunctionSelector("function decimals() view returns (uint8)"),
   seqOf: toFunctionSelector("function seqOf(address) view returns (uint64)"),
+  currentDay: toFunctionSelector("function currentDay() view returns (uint64)"),
+  dailyNotional: toFunctionSelector("function dailyNotional() view returns (uint256)"),
   latestRoundData: toFunctionSelector(
     "function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)",
   ),
@@ -42,12 +45,24 @@ type ChainState = {
   /** the round-completeness fields the naive read ignores */
   roundId?: bigint;
   answeredInRound?: bigint;
+  /** MandatePolicy's day bucket: what it has spent, and which day that was */
+  dailyNotional?: bigint;
+  /** absent means "the bucket is today's" */
+  bucketDay?: bigint;
+  /** latest block timestamp, seconds */
+  blockTime?: number;
 };
 
 /** A transport that answers eth_call from a plain object. No network. */
 function fakeChain(state: ChainState) {
+  const blockTime = BigInt(state.blockTime ?? now());
+
   return custom({
     async request({ method, params }: { method: string; params?: unknown[] }) {
+      // The day bucket is derived from the chain's clock, not the host's.
+      if (method === "eth_getBlockByNumber") {
+        return { number: "0x1", hash: `0x${"1".repeat(64)}`, timestamp: numberToHex(blockTime) };
+      }
       if (method !== "eth_call") throw new Error(`unexpected RPC method ${method}`);
       const { to, data } = (params as [{ to: Hex; data: Hex }])[0];
       const selector = data.slice(0, 10);
@@ -63,6 +78,14 @@ function fakeChain(state: ChainState) {
       }
       if (selector === SELECTORS.seqOf) {
         return encodeAbiParameters(parseAbiParameters("uint64"), [state.seq]);
+      }
+      if (selector === SELECTORS.currentDay) {
+        return encodeAbiParameters(parseAbiParameters("uint64"), [
+          state.bucketDay ?? blockTime / 86_400n,
+        ]);
+      }
+      if (selector === SELECTORS.dailyNotional) {
+        return encodeAbiParameters(parseAbiParameters("uint256"), [state.dailyNotional ?? 0n]);
       }
       if (selector === SELECTORS.latestRoundData) {
         return encodeAbiParameters(
@@ -236,6 +259,44 @@ describe("MirrorSources portfolio derivation", () => {
     const b = await sources({ seq: 7n }).binding();
     expect(b.seq).toBe(7n);
     expect(b.mandatePolicy.toLowerCase()).toBe(POLICY);
+  });
+});
+
+/**
+ * The daily cap is the one covenant where the Validator and the hook can
+ * disagree about the PAST rather than the trade. If they disagree, the
+ * Validator signs and the hook reverts — the worst failure shape available,
+ * because it costs gas and journals nothing.
+ */
+describe("MirrorSources daily-notional window", () => {
+  it("carries the chain's own day bucket forward, not zero", async () => {
+    const i = await sources({ dailyNotional: 700_000_000_000n }).covenantInputs(
+      buy("-50000000000"),
+      await snapshot(),
+    );
+    expect(i.priorDailyNotionalQuote).toBe(700_000_000_000n);
+  });
+
+  it("treats yesterday's bucket as empty, the way afterSwap does", async () => {
+    // Same stored total, but stamped with an earlier day. afterSwap would
+    // overwrite it rather than add to it, so carrying it forward here would
+    // refuse the day's first trade for spending that already rolled off.
+    const blockTime = now();
+    const i = await sources({
+      dailyNotional: 700_000_000_000n,
+      blockTime,
+      bucketDay: BigInt(Math.floor(blockTime / 86_400)) - 1n,
+    }).covenantInputs(buy("-50000000000"), await snapshot());
+    expect(i.priorDailyNotionalQuote).toBe(0n);
+  });
+
+  it("reports no prior spend on a refusal path, where no valuation exists", async () => {
+    const i = await sources({
+      dailyNotional: 700_000_000_000n,
+      price: 0n,
+    }).covenantInputs(buy("-50000000000"), await snapshot());
+    expect(i.feedFault?.fault).toBe("nonPositiveAnswer");
+    expect(i.priorDailyNotionalQuote).toBe(0n);
   });
 });
 
