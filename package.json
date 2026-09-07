@@ -20,6 +20,7 @@
     "contracts:build": "cd contracts && forge build",
     "contracts:install": "git submodule update --init --recursive contracts/lib",
     "inject": "npm run inject -w @indenture/manager --",
+    "rehearse:reset": "node scripts/rehearse-reset.mjs",
     "pretest:ts": "npm run build"
   },
   "devDependencies": {
