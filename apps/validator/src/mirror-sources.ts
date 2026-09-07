@@ -44,6 +44,8 @@ const erc20Abi = parseAbi([
 
 const mandatePolicyAbi = parseAbi([
   "function seqOf(address) view returns (uint64)",
+  "function currentDay() view returns (uint64)",
+  "function dailyNotional() view returns (uint256)",
 ]);
 
 export type MirrorConfig = {
@@ -186,20 +188,22 @@ export class MirrorSources implements Sources {
 
     const assetFeed = feedsOf(m)[asset.toLowerCase()];
 
-    const [quoteDecimals, assetDecimals, quoteBal, assetBal, reading] = await Promise.all([
-      this.decimalsOf(quote),
-      this.decimalsOf(asset),
-      this.balanceOf(quote),
-      this.balanceOf(asset),
-      assetFeed
-        ? readFeed(this.client, assetFeed, { maxAgeSec: m.feedStaleAfterSec })
-        : Promise.resolve<FeedReading>({
-            ok: false,
-            fault: "unreadable",
-            reason: `the mandate lists no price feed for ${asset}`,
-            detail: { asset },
-          }),
-    ]);
+    const [quoteDecimals, assetDecimals, quoteBal, assetBal, priorDaily, reading] =
+      await Promise.all([
+        this.decimalsOf(quote),
+        this.decimalsOf(asset),
+        this.balanceOf(quote),
+        this.balanceOf(asset),
+        this.priorDailyNotional(),
+        assetFeed
+          ? readFeed(this.client, assetFeed, { maxAgeSec: m.feedStaleAfterSec })
+          : Promise.resolve<FeedReading>({
+              ok: false,
+              fault: "unreadable",
+              reason: `the mandate lists no price feed for ${asset}`,
+              detail: { asset },
+            }),
+      ]);
 
     // No usable price means no defensible valuation. Refusing is always
     // available; guessing a price is not. The specific fault travels to the
@@ -274,12 +278,7 @@ export class MirrorSources implements Sources {
         ? m.universe.some((u) => u.toLowerCase() === asset.toLowerCase())
         : true,
       tradeNotionalQuote,
-      // TODO (needs the journal topic populated): sum Executed notionals over
-      // the trailing 24h. Zero is the SAFE direction to be wrong in — it can
-      // only ever let through a trade a fuller history would refuse, and the
-      // on-chain maxDailyNotional covenant is the backstop that actually
-      // binds. See mock-status.md row 5.
-      priorDailyNotionalQuote: 0n,
+      priorDailyNotionalQuote: priorDaily,
       navQuote: navQuote > 0n ? navQuote : 1n,
       postTradeCashQuote,
       postTradePositionQuote,
@@ -289,6 +288,45 @@ export class MirrorSources implements Sources {
   }
 
   // --- chain reads -------------------------------------------------------
+
+  /**
+   * How much notional the fund has already executed inside the window the
+   * chain is measuring — read from MandatePolicy's own day bucket, not
+   * reconstructed from the journal.
+   *
+   * The obvious implementation is to sum `Executed` notionals from the journal
+   * topic over the trailing 24h, and it would be wrong in a way that is hard
+   * to see: `afterSwap` does not enforce a trailing window at all, it enforces
+   * a fixed-width UTC day bucket (`block.timestamp / 1 days`). A trailing sum
+   * and a day bucket disagree at every boundary, so the Validator would
+   * approve trades the hook then reverts — burning gas and producing a
+   * refusal whose reason lives nowhere the auditor is looking.
+   *
+   * Asking the contract what it thinks it has spent today makes the two
+   * agree by construction. The day is derived from the latest block, not
+   * `Date.now()`: an edge Worker's clock has no authority over which bucket
+   * the next block lands in.
+   */
+  private async priorDailyNotional(): Promise<bigint> {
+    const [block, currentDay, dailyNotional] = await Promise.all([
+      this.client.getBlock(),
+      this.client.readContract({
+        address: this.cfg.mandatePolicy,
+        abi: mandatePolicyAbi,
+        functionName: "currentDay",
+      }),
+      this.client.readContract({
+        address: this.cfg.mandatePolicy,
+        abi: mandatePolicyAbi,
+        functionName: "dailyNotional",
+      }),
+    ]);
+
+    // A stale bucket is not a small bucket — it is an empty one. Carrying
+    // yesterday's total forward would refuse today's first trade.
+    const today = block.timestamp / 86_400n;
+    return BigInt(currentDay) === today ? dailyNotional : 0n;
+  }
 
   private async decimalsOf(token: Hex): Promise<number> {
     return Number(
