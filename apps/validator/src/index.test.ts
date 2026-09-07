@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import app from "./index.js";
 import { validateRequestSchema } from "./schema.js";
 
 describe("validate boundary schema", () => {
@@ -32,5 +33,51 @@ describe("validate boundary schema", () => {
 
   it("rejects a non-hex poolId", () => {
     expect(validateRequestSchema.safeParse({ ...good, poolId: "pool-1" }).success).toBe(false);
+  });
+});
+
+/**
+ * The prospectus calls /validate from the browser, from another origin. If
+ * these headers go missing the console fails with a console error nobody
+ * watching a demo will ever see — the page just sits there.
+ */
+describe("browser access", () => {
+  const ENV = {
+    VALIDATOR_KEY: `0x${"1".repeat(64)}`,
+    CHAIN_ID: "296",
+    HEDERA_RPC_URL: "http://unused",
+    HEDERA_MIRROR_URL: "http://unused",
+  };
+
+  it("answers the preflight the attack console sends", async () => {
+    const res = await app.request(
+      "/validate",
+      {
+        method: "OPTIONS",
+        headers: {
+          origin: "https://indenture.example",
+          "access-control-request-method": "POST",
+          "access-control-request-headers": "content-type",
+        },
+      },
+      ENV,
+    );
+    expect(res.status).toBeLessThan(300);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    expect(res.headers.get("access-control-allow-methods")).toContain("POST");
+  });
+
+  it("puts the header on the answer itself, not just the preflight", async () => {
+    const res = await app.request(
+      "/validate",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "https://indenture.example" },
+        body: JSON.stringify({ poolId: "not-a-pool", swapParams: {} }),
+      },
+      ENV,
+    );
+    expect(res.status).toBe(400);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
   });
 });
