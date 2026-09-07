@@ -1,5 +1,5 @@
 import { JournalList } from "@/components/JournalList";
-import { getJournal, JOURNAL_TOPIC_ID, USING_MOCKS } from "@/lib/data";
+import { getJournal, JOURNAL_TOPIC_ID } from "@/lib/data";
 
 export const revalidate = 5;
 
@@ -9,7 +9,8 @@ export const revalidate = 5;
  * /blocked, unfiltered by default.
  */
 export default async function JournalPage() {
-  const rows = await getJournal();
+  const journal = await getJournal();
+  const rows = journal.data;
 
   return (
     <div>
@@ -24,7 +25,9 @@ export default async function JournalPage() {
         <p className="mt-3 font-mono text-xs text-slate">
           topic {JOURNAL_TOPIC_ID || "(unset)"} · click any entry for the full
           receipt
-          {USING_MOCKS && <span className="text-oxblood"> · sample data</span>}
+          {!journal.live && (
+            <span className="text-oxblood"> · sample data — {journal.note}</span>
+          )}
         </p>
       </header>
 

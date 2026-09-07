@@ -1,10 +1,6 @@
 import { BlockedWall } from "@/components/BlockedWall";
-import {
-  getAttackScenarios,
-  getBlocked,
-  JOURNAL_TOPIC_ID,
-  USING_MOCKS,
-} from "@/lib/data";
+import { getAttackScenarios, getBlocked, JOURNAL_TOPIC_ID } from "@/lib/data";
+import { VALIDATOR_URL } from "@/lib/deployments";
 
 export const revalidate = 5;
 
@@ -14,10 +10,11 @@ export const revalidate = 5;
  * A blocked attack is the product, not a hidden failure.
  */
 export default async function BlockedPage() {
-  const [rows, scenarios] = await Promise.all([
+  const [blocked, scenarios] = await Promise.all([
     getBlocked(),
     Promise.resolve(getAttackScenarios()),
   ]);
+  const rows = blocked.data;
 
   return (
     <div>
@@ -33,9 +30,9 @@ export default async function BlockedPage() {
           Every entry is a permanent record on the Hedera Consensus Service. The
           reason is re-derived from source — mandate, pool state, price feed —
           not taken from the proposer.
-          {USING_MOCKS && (
+          {!blocked.live && (
             <span className="block mt-1 text-oxblood">
-              Showing sample data — no journal topic is live yet.
+              Showing sample data — {blocked.note}.
             </span>
           )}
         </p>
@@ -46,6 +43,7 @@ export default async function BlockedPage() {
           initialRows={rows}
           scenarios={scenarios}
           topicId={JOURNAL_TOPIC_ID}
+          validatorUrl={VALIDATOR_URL}
         />
       </div>
     </div>

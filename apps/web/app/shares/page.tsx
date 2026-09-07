@@ -9,7 +9,8 @@ export const revalidate = 5;
  * can't. A portfolio breach freezes the whole class.
  */
 export default async function SharesPage() {
-  const state = await getSharesState();
+  const shares = await getSharesState();
+  const state = shares.data;
   const { shareClass } = state;
   const supply = Number(shareClass.totalSupply) / 1_000_000;
 
@@ -33,7 +34,10 @@ export default async function SharesPage() {
           {supply.toLocaleString("en-US")}
         </dd>
         <dt className="text-slate">Holders</dt>
-        <dd className="text-signal tabular-nums">{shareClass.holders}</dd>
+        {/* ERC-3643 exposes no holder count; an em-dash beats a guess. */}
+        <dd className="text-signal tabular-nums">
+          {shareClass.holders ?? "—"}
+        </dd>
         <dt className="text-slate">NAV / share</dt>
         <dd className="text-signal tabular-nums">
           ${Number(shareClass.navPerShare).toFixed(4)}
@@ -43,6 +47,12 @@ export default async function SharesPage() {
           {shareClass.frozen ? "FROZEN — mandate in breach" : "open"}
         </dd>
       </dl>
+
+      {!shares.live && (
+        <p className="font-mono text-[11px] text-oxblood">
+          Sample data — {shares.note}.
+        </p>
+      )}
 
       <SharesPanel state={state} />
     </div>

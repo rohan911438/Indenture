@@ -12,12 +12,16 @@ import type { ReceiptBody } from "@/lib/types";
 export const revalidate = 5;
 
 export default async function MandatePage() {
-  const [mandate, covenants, shares, blocked] = await Promise.all([
+  const [mandateSrc, covenantsSrc, sharesSrc, blockedSrc] = await Promise.all([
     getMandate(),
     getCovenantStatus(),
     getSharesState(),
     getBlocked(),
   ]);
+  const mandate = mandateSrc.data;
+  const covenants = covenantsSrc.data;
+  const shares = sharesSrc.data;
+  const blocked = blockedSrc.data;
 
   const supply = Number(shares.shareClass.totalSupply) / 1_000_000;
   const nav = supply * Number(shares.shareClass.navPerShare);
@@ -75,7 +79,7 @@ export default async function MandatePage() {
       <section>
         <div className="flex items-baseline justify-between gap-4">
           <div className="font-mono text-xs uppercase tracking-[0.25em] text-slate">
-            Covenants, live
+            {covenantsSrc.live ? "Covenants, live" : "Covenants, sample"}
           </div>
           {tightest && (
             <div className="font-mono text-[11px] text-slate">
@@ -83,6 +87,11 @@ export default async function MandatePage() {
             </div>
           )}
         </div>
+        {covenantsSrc.note && (
+          <p className="mt-2 font-mono text-[11px] text-oxblood">
+            {covenantsSrc.note}
+          </p>
+        )}
         <div className="mt-6 grid grid-cols-1 gap-x-12 gap-y-8 sm:grid-cols-2">
           {covenants.map((c) => (
             <CovenantGauge key={c.key} status={c} />

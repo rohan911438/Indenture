@@ -39,7 +39,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const shares = await getSharesState();
+  const shares = (await getSharesState()).data;
   const identities = shares.wallets.map((w) => ({
     address: w.address,
     label: w.label,
