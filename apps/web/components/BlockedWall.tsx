@@ -11,10 +11,13 @@ export function BlockedWall({
   initialRows,
   scenarios,
   topicId,
+  validatorUrl,
 }: {
   initialRows: JournalRow[];
   scenarios: AttackScenario[];
   topicId: string;
+  /** empty until a Validator is deployed — the console says which mode it is in */
+  validatorUrl: string;
 }) {
   const [extra, setExtra] = useState<JournalRow[]>([]);
   const featuredRef = useRef<HTMLDivElement>(null);
@@ -41,7 +44,11 @@ export function BlockedWall({
 
   return (
     <div className="space-y-8">
-      <AttackConsole scenarios={scenarios} onResult={onResult} />
+      <AttackConsole
+        scenarios={scenarios}
+        onResult={onResult}
+        validatorUrl={validatorUrl}
+      />
 
       {featured ? (
         <div ref={featuredRef} className="scroll-mt-24">

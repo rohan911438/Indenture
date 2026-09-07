@@ -23,30 +23,78 @@ function prefersReducedMotion(): boolean {
   );
 }
 
+/** What /validate answers with — shared-contracts/validator-api.md. */
+type ValidateResponse = {
+  decision: "APPROVED" | "REFUSED";
+  reason?: string;
+  detail?: { covenant?: string };
+  receipt?: { seq?: number; poolId?: string; paramsHash?: string; mandateHash?: string };
+  signature?: string;
+};
+
 export function AttackConsole({
   scenarios,
   onResult,
+  validatorUrl,
 }: {
   scenarios: AttackScenario[];
   onResult: (row: JournalRow) => void;
+  /** empty when no Validator is deployed yet */
+  validatorUrl: string;
 }) {
   const [phase, setPhase] = useState(-1); // -1 idle · 0..4 step · 5 done
   const [active, setActive] = useState<AttackScenario | null>(null);
+  const [liveVerdict, setLiveVerdict] = useState<string | null>(null);
   const runs = useRef(0);
   const running = phase >= 0 && phase < STEPS.length;
+  const live = validatorUrl.length > 0;
+
+  /**
+   * Send the proposal to the real Validator — and send ONLY
+   * `{ poolId, swapParams }`.
+   *
+   * The injected reasoning is dropped right here, in the caller, which is the
+   * entire demonstration: the attack text never reaches the service that
+   * decides. Sending it and having the Validator ignore it would prove
+   * something much weaker, and sending it under any other key is a 400 by
+   * design (the request schema is strict).
+   */
+  async function ask(s: AttackScenario): Promise<ValidateResponse> {
+    const res = await fetch(`${validatorUrl.replace(/\/$/, "")}/validate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ poolId: s.poolId, swapParams: s.swapParams }),
+    });
+    if (!res.ok) throw new Error(`validator answered ${res.status}`);
+    return (await res.json()) as ValidateResponse;
+  }
 
   async function run(s: AttackScenario) {
     if (running) return;
     runs.current += 1;
-    const nonce = 60 + runs.current;
     setActive(s);
+    setLiveVerdict(null);
     const gap = prefersReducedMotion() ? 120 : 650;
+
+    // Ask the Validator while the steps animate, so the verdict on screen is
+    // the one that came back rather than the one we expected.
+    const answer: Promise<ValidateResponse | null> = live
+      ? ask(s).catch((e: unknown) => {
+          setLiveVerdict(`Validator unreachable — ${(e as Error).message}`);
+          return null;
+        })
+      : Promise.resolve(null);
 
     for (let i = 0; i < STEPS.length; i++) {
       setPhase(i);
       await new Promise((r) => setTimeout(r, gap));
     }
+    const real = await answer;
     setPhase(STEPS.length);
+
+    const nonce = real?.receipt?.seq ?? 60 + runs.current;
+    const decision = real?.decision ?? "REFUSED";
+    if (real) setLiveVerdict(`${decision} — ${real.detail?.covenant ?? real.reason ?? ""}`);
 
     onResult({
       seq: 900 + runs.current,
@@ -54,18 +102,22 @@ export function AttackConsole({
       vault: VAULT,
       ts: Math.floor(Date.now() / 1000),
       body: {
-        decision: "REFUSED",
-        reason: s.reason,
+        decision,
+        reason: real?.reason ?? s.reason,
         seq: nonce,
-        poolId: s.poolId,
-        mandateHash: MANDATE_HASH,
-        paramsHash: "0x" + "ef".repeat(31) + "01",
+        poolId: real?.receipt?.poolId ?? s.poolId,
+        mandateHash: real?.receipt?.mandateHash ?? MANDATE_HASH,
+        paramsHash: real?.receipt?.paramsHash ?? "0x" + "ef".repeat(31) + "01",
+        ...(real?.signature ? { signature: real.signature } : {}),
+        source: live ? "validator" : "rehearsal",
       },
       context: {
         proposer: s.proposer,
         nonce,
         poolId: s.poolId,
         swapParams: s.swapParams,
+        // The reasoning is shown here because this is the journal's CONTEXT
+        // record of what the model saw — not because it was sent anywhere.
         reasoning: s.injectedReasoning,
         injected: true,
       },
@@ -83,6 +135,7 @@ export function AttackConsole({
             onClick={() => {
               setPhase(-1);
               setActive(null);
+              setLiveVerdict(null);
             }}
             className="font-mono text-xs text-slate hover:text-signal"
           >
@@ -91,8 +144,19 @@ export function AttackConsole({
         )}
       </div>
       <p className="mt-2 font-sans text-sm text-slate">
-        Fire a prompt-injection at the pipeline. Simulated locally — the same
-        path runs against the deployed Validator.
+        Fire a prompt-injection at the pipeline.{" "}
+        {live ? (
+          <>
+            The proposal goes to the deployed Validator; only{" "}
+            <span className="font-mono text-xs">{"{ poolId, swapParams }"}</span>{" "}
+            crosses the boundary, and the verdict below is its answer.
+          </>
+        ) : (
+          <span className="text-oxblood">
+            No Validator is deployed yet — this is a scripted rehearsal of the
+            same sequence, not a live refusal.
+          </span>
+        )}
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -118,9 +182,11 @@ export function AttackConsole({
           {STEPS.map((raw, i) => {
             const line =
               raw === "__verdict__"
-                ? `REFUSED — ${active.covenant}`
+                ? (liveVerdict ?? `REFUSED — ${active.covenant}`)
                 : raw === "__journal__"
-                  ? "Written to the journal topic, permanently"
+                  ? live
+                    ? "Written to the journal topic, permanently"
+                    : "Would be written to the journal topic — no topic yet"
                   : raw;
             const done = phase > i || phase === STEPS.length;
             const now = phase === i;
