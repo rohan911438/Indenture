@@ -7,3 +7,5 @@ export const MIRROR_URL =
   deployments.network?.mirrorUrl ?? "https://testnet.mirrornode.hedera.com/api/v1";
 export const JOURNAL_TOPIC = deployments.hcs?.journalTopicId ?? "";
 export const MANDATE_TOPIC = deployments.hcs?.mandateTopicId ?? "";
+/** The deployed Validator Worker. Empty until Sprint 5 puts one up. */
+export const VALIDATOR_URL = deployments.services?.validatorUrl ?? "";
