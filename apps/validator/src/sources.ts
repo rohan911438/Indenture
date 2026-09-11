@@ -120,9 +120,15 @@ export class MockSources implements Sources {
     req: ValidateRequest,
     m: MandateSnapshot,
   ): Promise<CovenantInputs> {
-    // Mock pool: currency0 = asset d0, currency1 = quote. Price 1:1, 6dp.
-    // amountSpecified is treated as raw 6dp units; |x| is the quote notional.
-    const asset = "0x00000000000000000000000000000000000000d0";
+    // Mock pool: currency0 = the mandate's risk asset, currency1 = quote.
+    // Price 1:1, 6dp. amountSpecified is raw 6dp units; |x| is the notional.
+    //
+    // The asset is taken from the MANDATE rather than written out here. It
+    // used to be the placeholder d0, which stopped being the universe the
+    // moment a real deploy regenerated the mandate: every mock proposal then
+    // refused with `assetNotInUniverse`, which is a true statement about a
+    // fund that does not exist and tells you nothing about the one that does.
+    const asset = m.universe[0] ?? "0x00000000000000000000000000000000000000d0";
     const notional =
       BigInt(req.swapParams.amountSpecified) < 0n
         ? -BigInt(req.swapParams.amountSpecified)
