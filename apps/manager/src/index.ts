@@ -16,11 +16,7 @@ import { buildManagerPrompt, compileMandate } from "@indenture/mandate";
 import type { Proposer } from "./proposer.js";
 import { RuleProposer } from "./rule-proposer.js";
 import { LlmProposer } from "./llm-proposer.js";
-import {
-  MockFundStateProvider,
-  MirrorFundStateProvider,
-  type FundStateProvider,
-} from "./fund-state.js";
+import { loadDeployments, stateProvider } from "./repo.js";
 import {
   buildContextEnvelope,
   encodeReceiptBlob,
@@ -30,31 +26,6 @@ import { submitTrade, type PoolConfig } from "./trade.js";
 import type { Hex } from "viem";
 
 const VAULT_MOCK = "0x00000000000000000000000000000000000000b0";
-
-type DeploymentsFile = {
-  network?: { rpcUrl?: string; chainId?: number };
-  contracts?: Record<string, string>;
-  pool?: { currency0?: string; currency1?: string; fee?: number; tickSpacing?: number };
-  hcs?: Record<string, string>;
-};
-
-/** deployments.json is the single source of truth. Never read an address from env. */
-function loadDeployments(): DeploymentsFile {
-  try {
-    const base = process.env.INIT_CWD ?? process.cwd();
-    return JSON.parse(
-      readFileSync(resolve(base, "contracts/deployments.json"), "utf8"),
-    ) as DeploymentsFile;
-  } catch {
-    try {
-      return JSON.parse(
-        readFileSync(resolve(process.cwd(), "../../contracts/deployments.json"), "utf8"),
-      ) as DeploymentsFile;
-    } catch {
-      return {};
-    }
-  }
-}
 
 function mandatePrompt(): string {
   try {
@@ -80,37 +51,6 @@ function pickProposer(): Proposer {
     });
   }
   return new RuleProposer();
-}
-
-/**
- * mock-status.md row 6. Switches on the DATA, like the Validator's own seam:
- * if deployments.json has no addresses there is genuinely nothing to read.
- *
- * Being wrong here is cheap — this view is advisory and the Validator
- * re-derives everything independently — so it falls back quietly rather than
- * failing the tick.
- */
-function stateProvider(): FundStateProvider {
-  const dep = loadDeployments();
-  const vault = dep.contracts?.IndentureVault;
-  const poolId = (dep.pool as { poolId?: string } | undefined)?.poolId;
-  if (!vault || !poolId) return new MockFundStateProvider();
-
-  try {
-    const base = process.env.INIT_CWD ?? process.cwd();
-    const yaml = readFileSync(resolve(base, "mandates/fund-one.yaml"), "utf8");
-    const compiled = compileMandate(yaml);
-    return new MirrorFundStateProvider({
-      rpcUrl: dep.network?.rpcUrl ?? "https://testnet.hashio.io/api",
-      poolId,
-      vault: vault as Hex,
-      quote: compiled.mandate.quote as Hex,
-      priceFeeds: compiled.mandate.priceFeeds,
-      feedStaleAfterSec: compiled.feedStaleAfterSec,
-    });
-  } catch {
-    return new MockFundStateProvider();
-  }
 }
 
 async function submitContext(envBody: ReturnType<typeof buildContextEnvelope>) {
@@ -225,8 +165,18 @@ export async function tick(opts: { injected?: boolean } = {}): Promise<void> {
     // A revert here is a SUCCESS for the product, not a crash: it means the
     // hook refused a trade the Validator had already signed. Log it plainly
     // and let the journaler pick the refusal up from chain.
-    const firstLine = (e as Error).message.split("\n")[0];
-    console.log(`[manager] vault.trade reverted: ${firstLine}`);
+    // ...and which covenant refused is the only interesting part. Logging
+    // just the first line printed "reverted with the following signature:"
+    // and then threw the signature away, which is precisely backwards.
+    const err = e as Error & { shortMessage?: string; metaMessages?: string[] };
+    const detail = [
+      err.shortMessage ?? err.message.split("\n")[0],
+      ...(err.metaMessages ?? []),
+    ]
+      .filter((s): s is string => Boolean(s))
+      .map((s) => s.trim())
+      .join(" | ");
+    console.log(`[manager] vault.trade reverted: ${detail}`);
   }
 }
 
