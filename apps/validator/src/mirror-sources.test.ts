@@ -18,10 +18,27 @@ import { compileMandate } from "@indenture/mandate";
  * of that needs a live chain to pin down, so it is pinned down here.
  */
 
-const QUOTE = "0x00000000000000000000000000000000000000c0"; // 6dp, currency0
-const ASSET = "0x00000000000000000000000000000000000000d0"; // 18dp, currency1
-const FEED = "0x00000000000000000000000000000000000000e0"; //  8dp
-const VAULT = "0x00000000000000000000000000000000000000b0";
+/**
+ * Taken from the COMMITTED mandate, not written out here.
+ *
+ * `scripts/regen-mandate.mjs` rewrites the mandate with real addresses on
+ * every deploy, so hardcoding the placeholders made a successful deploy look
+ * like a broken build: eleven tests failing with "no price feed for 0x…d0",
+ * which reads like a bug in the reader and is nothing of the sort. Deriving
+ * them means this suite pins the maths, which is what it is for, and says
+ * nothing about which fund is deployed, which is not.
+ */
+const FIXTURE = compileMandate(MANDATE_YAML_FIXTURE).mandate;
+// Lowercased because the fake chain matches on the `to` address, and viem
+// lowercases it. A checksummed mandate address compared against a lowercased
+// call target silently misses, and the fake chain then answers the DEFAULT
+// decimals for every token — which does not throw, it just scales the whole
+// portfolio by 10^12 and fails four assertions with plausible numbers.
+const lower = (a: string) => a.toLowerCase() as `0x${string}`;
+const QUOTE = lower(FIXTURE.quote); // 6dp, currency0
+const ASSET = lower(FIXTURE.universe[0]!); // 18dp, currency1
+const FEED = lower(FIXTURE.priceFeeds[FIXTURE.universe[0]!]!); // 8dp
+const VAULT = lower(FIXTURE.vault);
 const POLICY = "0x00000000000000000000000000000000000000a4";
 
 const SELECTORS = {
