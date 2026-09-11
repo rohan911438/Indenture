@@ -7,14 +7,15 @@
     "mirrorUrl": "https://testnet.mirrornode.hedera.com/api/v1"
   },
   "contracts": {
-    "PoolManager": "",
-    "PolicyHook": "",
+    "PoolManager": "0x27dCFA0F8000eBFEfA178A8E850f8988F8391024",
+    "PolicyHook": "0x311F67ffDF2e03aB590B2Da7F491638b85c3C0c0",
     "CompliancePolicy": "",
-    "MandatePolicy": "",
-    "IndentureVault": "",
+    "MandatePolicy": "0x623011f9e8D9DacCF1858086Dba1d67517E9a361",
+    "IndentureVault": "0x3be7042D043924CC4114859a66b6a3Fc43b69047",
     "MandateComplianceModule": "",
-    "MockUSDC": "",
-    "ChainlinkPriceFeed": ""
+    "MockUSDC": "0x9812460f054E4a59ef5348bb0996e2888a37D908",
+    "ChainlinkPriceFeed": "0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a",
+    "MockAsset": "0x5248468473Fe5667A4990E3458ca8b862d8DbA66"
   },
   "ats": {
     "SecurityToken": "",
@@ -22,23 +23,24 @@
     "ModularCompliance": ""
   },
   "pool": {
-    "poolId": "",
-    "currency0": "",
-    "currency1": "",
+    "poolId": "0xc7e0cd2acbb5d39f2e06910beaf374b91afc6ac2fe75769d9aea6592693b0d08",
+    "currency0": "0x5248468473Fe5667A4990E3458ca8b862d8DbA66",
+    "currency1": "0x9812460f054E4a59ef5348bb0996e2888a37D908",
     "fee": 3000,
-    "tickSpacing": 60
+    "tickSpacing": 60,
+    "quoteIsCurrency0": false
   },
   "services": {
     "$comment": "Where the deployed Validator answers. Empty means the attack console runs its scripted rehearsal instead of calling a live service, and says so.",
     "validatorUrl": ""
   },
   "hcs": {
-    "mandateTopicId": "",
-    "journalTopicId": ""
+    "mandateTopicId": "0.0.10463496",
+    "journalTopicId": "0.0.10463497"
   },
   "signers": {
-    "validator": "",
+    "validator": "0x2F3E9E762302DABeCbe3a2370635D2434e557C3D",
     "issuer": "",
-    "manager": ""
+    "manager": "0x1D0646Cf8cdcff3a42780a3C93D3d069fc387d2F"
   }
 }
