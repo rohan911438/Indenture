@@ -31,14 +31,16 @@ a hidden failure.
 5. **Runtime placement follows ONE constraint:** anything that writes to Hedera
    Consensus Service (HCS) needs gRPC over HTTP/2 via `@hashgraph/sdk`, which
    only runs on Node — never on an edge runtime. Everything else (pure HTTP)
-   runs on Cloudflare Workers or is static.
+   is a serverless function or is static.
+
+Deploying it to testnet, step by step, is [DEPLOY.md](DEPLOY.md).
 
 ## Topology
 
 | App | Runtime | Trust | Role |
 |---|---|---|---|
 | `apps/manager` | Node, GitHub Actions cron | **untrusted by design** | Calls an LLM behind `Proposer{propose(state):Proposal}`, with a `RuleProposer` arithmetic fallback for quota outages. |
-| `apps/validator` | Cloudflare Worker (Hono + Zod) | holds `VALIDATOR_KEY` | Signs EIP-712 receipts with viem, never ethers. |
+| `apps/validator` | Hono + Zod, on Vercel or Cloudflare Workers | holds `VALIDATOR_KEY` | Signs EIP-712 receipts with viem, never ethers. One source, two hosts; only config resolution and the nonce lock differ. |
 | `apps/journaler` | Node, cron + local watch | — | Writes `Executed` / `BreachObserved` events to the journal HCS topic via `@hashgraph/sdk`. |
 | `apps/web` | Next.js 15 / React 19 on Vercel | — | 4 routes, zero API routes, reads only from mirror node + RPC + wagmi. |
 
