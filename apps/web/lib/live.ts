@@ -80,23 +80,23 @@ export type ChainConfig = {
  * Validator and the Manager decide the same way, from the same file, so the
  * three services can never disagree about whether the fund is deployed.
  */
-export function chainConfig(): ChainConfig | null {
-  const vault = deployments.contracts?.IndentureVault;
-  const mandatePolicy = deployments.contracts?.MandatePolicy;
-  const c0 = deployments.pool?.currency0 as string | undefined;
-  const c1 = deployments.pool?.currency1 as string | undefined;
+export function chainConfig(doc: typeof deployments = deployments): ChainConfig | null {
+  const vault = doc.contracts?.IndentureVault;
+  const mandatePolicy = doc.contracts?.MandatePolicy;
+  const c0 = doc.pool?.currency0 as string | undefined;
+  const c1 = doc.pool?.currency1 as string | undefined;
   if (!vault || !mandatePolicy || !c0 || !c1) return null;
 
   return {
-    rpcUrl: deployments.network?.rpcUrl ?? "https://testnet.hashio.io/api",
+    rpcUrl: doc.network?.rpcUrl ?? "https://testnet.hashio.io/api",
     mirrorUrl:
-      deployments.network?.mirrorUrl ?? "https://testnet.mirrornode.hedera.com/api/v1",
+      doc.network?.mirrorUrl ?? "https://testnet.mirrornode.hedera.com/api/v1",
     vault: getAddress(vault),
     mandatePolicy: getAddress(mandatePolicy),
     currency0: getAddress(c0),
     currency1: getAddress(c1),
     quoteIsCurrency0: Boolean(
-      (deployments.pool as Record<string, unknown>)?.quoteIsCurrency0,
+      (doc.pool as Record<string, unknown>)?.quoteIsCurrency0,
     ),
   };
 }

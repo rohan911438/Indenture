@@ -185,11 +185,43 @@ afterEach(() => {
 });
 
 describe("chainConfig", () => {
-  it("stays on sample data until deployments.json is populated", () => {
-    // The committed deployments.json has empty addresses. Nothing should try
-    // a live read against a fund that does not exist — and no env flag should
-    // be able to force one.
-    expect(chainConfig()).toBeNull();
+  it("stays on sample data while the addresses are empty", () => {
+    // Nothing should try a live read against a fund that does not exist, and
+    // no env flag should be able to force one. Asserted against an explicit
+    // empty document rather than the committed file, because the committed
+    // file is populated the moment a real fund is deployed — at which point
+    // this test was asserting the deploy had not happened.
+    const empty = {
+      contracts: { IndentureVault: "", MandatePolicy: "" },
+      pool: { currency0: "", currency1: "" },
+      network: {},
+    };
+    expect(chainConfig(empty as never)).toBeNull();
+  });
+
+  it("goes live once the vault, policy and both currencies are present", () => {
+    const doc = {
+      contracts: {
+        IndentureVault: `0x${"1".repeat(40)}`,
+        MandatePolicy: `0x${"2".repeat(40)}`,
+      },
+      pool: { currency0: `0x${"3".repeat(40)}`, currency1: `0x${"4".repeat(40)}`, quoteIsCurrency0: false },
+      network: { rpcUrl: "https://rpc.test", mirrorUrl: "https://mirror.test" },
+    };
+    const cfg = chainConfig(doc as never);
+    expect(cfg?.rpcUrl).toBe("https://rpc.test");
+    expect(cfg?.quoteIsCurrency0).toBe(false);
+  });
+
+  it("still refuses when the pool half is missing", () => {
+    // A half-written deployments.json is the dangerous case: addresses that
+    // look real, a pool that was never initialised.
+    const doc = {
+      contracts: { IndentureVault: `0x${"1".repeat(40)}`, MandatePolicy: `0x${"2".repeat(40)}` },
+      pool: { currency0: "", currency1: "" },
+      network: {},
+    };
+    expect(chainConfig(doc as never)).toBeNull();
   });
 });
 
