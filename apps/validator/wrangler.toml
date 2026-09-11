@@ -1,3 +1,6 @@
+# Cloudflare deployment. The Vercel one is api/index.ts + vercel.json, from the
+# same src/index.ts app. Neither host is privileged; pick one and delete
+# nothing, because the other stays a working fallback. See DEPLOY.md section 5.
 name = "indenture-validator"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
