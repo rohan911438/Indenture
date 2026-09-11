@@ -8,17 +8,26 @@ import { validateRequestSchema } from "./schema.js";
 import { runCovenantChecks } from "./checks.js";
 import { MockSources, paramsHashOf, type Sources } from "./sources.js";
 import { MirrorSources, mirrorConfigFrom } from "./mirror-sources.js";
+import { resolveEnv, type ValidatorEnv } from "./env.js";
+import { lockFor } from "./lock.js";
 import deployments from "../../../contracts/deployments.json";
 
-type Bindings = {
-  VALIDATOR_KEY: string; // wrangler secret
-  CHAIN_ID: string;
-  HEDERA_RPC_URL: string;
-  HEDERA_MIRROR_URL: string;
-  CACHE?: KVNamespace;
-};
+/**
+ * Bindings are PARTIAL on purpose. On Cloudflare they arrive full; on Vercel
+ * there are none at all and every value comes from the ambient environment.
+ * `resolveEnv` is the only place that difference is allowed to matter.
+ *
+ * The deployment document is a PARAMETER rather than a module-level import,
+ * because the seam below reads it to decide between live and mock sources.
+ * Once a real fund is deployed, `contracts/deployments.json` is populated and
+ * the offline suites would silently start talking to testnet — slow, flaky,
+ * and asserting against a chain that moves. Tests pass an empty document and
+ * get the mock sources deterministically. Nothing at runtime passes anything.
+ */
+type DeploymentDoc = Parameters<typeof mirrorConfigFrom>[0];
 
-const app = new Hono<{ Bindings: Bindings }>();
+export function createApp(deploymentDoc: DeploymentDoc = deployments) {
+const app = new Hono<{ Bindings: Partial<ValidatorEnv> }>();
 
 /**
  * The prospectus is a static site on another origin, and its attack console
@@ -53,8 +62,8 @@ const RECEIPT_TTL_SEC = 120;
  * genuinely nothing to read, and saying so is honest. If they are there, there
  * is no reason to prefer a mock.
  */
-function sourcesFor(env: Bindings): Sources {
-  const cfg = mirrorConfigFrom(deployments);
+function sourcesFor(env: ValidatorEnv): Sources {
+  const cfg = mirrorConfigFrom(deploymentDoc);
   if (!cfg) return new MockSources();
   return new MirrorSources({
     ...cfg,
@@ -64,13 +73,14 @@ function sourcesFor(env: Bindings): Sources {
 }
 
 // --------------------------------------------------------------------------
-// GET /health  - never signs, never touches KV, safe to poll
+// GET /health  - never signs, never takes the nonce lock, safe to poll
 // --------------------------------------------------------------------------
 app.get("/health", async (c) => {
-  const src = sourcesFor(c.env);
+  const env = resolveEnv(c.env);
+  const src = sourcesFor(env);
   let validator: string | null = null;
   try {
-    validator = privateKeyToAccount(c.env.VALIDATOR_KEY as Hex).address;
+    validator = privateKeyToAccount(env.VALIDATOR_KEY as Hex).address;
   } catch {
     validator = null;
   }
@@ -89,7 +99,9 @@ app.get("/health", async (c) => {
     validator,
     mandateSeq,
     feedAgeSeconds,
-    chainId: Number(c.env.CHAIN_ID),
+    chainId: Number(env.CHAIN_ID),
+    // Says out loud whether the journal can show two receipts for one nonce.
+    nonceLock: lockFor(env).kind,
   });
 });
 
@@ -97,7 +109,7 @@ app.get("/health", async (c) => {
 // GET /mandate  - the rulebook the Validator is currently enforcing
 // --------------------------------------------------------------------------
 app.get("/mandate", async (c) => {
-  const m = await sourcesFor(c.env).mandate();
+  const m = await sourcesFor(resolveEnv(c.env)).mandate();
   return c.json({
     yaml: m.yaml,
     mandateHash: m.mandateHash,
@@ -127,7 +139,8 @@ app.post("/validate", async (c) => {
     );
   }
   const req = parsed.data;
-  const src = sourcesFor(c.env);
+  const env = resolveEnv(c.env);
+  const src = sourcesFor(env);
 
   const [m, binding] = await Promise.all([src.mandate(), src.binding()]);
   const ph = paramsHashOf(req);
@@ -163,20 +176,13 @@ app.post("/validate", async (c) => {
   }
 
   // --- single-flight nonce lock ------------------------------------------
-  // Best-effort only, and deliberately so. Workers KV has no compare-and-set,
-  // so two concurrent requests can both read empty and both sign for the same
-  // seq. That is not a fund-safety problem: MandatePolicy.seqOf is the real
-  // anti-replay boundary and only one of them can ever land on chain. This
-  // lock exists to keep the JOURNAL clean — two signed receipts for one nonce
-  // is exactly the kind of thing the journal is supposed to make unambiguous.
-  // Do not mistake it for a security control.
+  // Best-effort, and deliberately so. See lock.ts: this keeps the JOURNAL
+  // unambiguous, and MandatePolicy.seqOf remains the real anti-replay
+  // boundary. Every implementation fails open. Do not mistake it for a
+  // security control.
   const lockKey = `nonce:${binding.vault}:${binding.seq}`;
-  if (c.env.CACHE) {
-    const held = await c.env.CACHE.get(lockKey);
-    if (held) {
-      return refuse("nonce in flight", { seq: Number(binding.seq), lockKey });
-    }
-    await c.env.CACHE.put(lockKey, "1", { expirationTtl: RECEIPT_TTL_SEC });
+  if (!(await lockFor(env).acquire(lockKey, RECEIPT_TTL_SEC))) {
+    return refuse("nonce in flight", { seq: Number(binding.seq), lockKey });
   }
 
   // --- sign ------------------------------------------------------------
@@ -191,9 +197,9 @@ app.post("/validate", async (c) => {
 
   const signed = await signReceipt({
     receipt,
-    chainId: Number(c.env.CHAIN_ID),
+    chainId: Number(env.CHAIN_ID),
     verifyingContract: binding.mandatePolicy,
-    privateKey: c.env.VALIDATOR_KEY as Hex,
+    privateKey: env.VALIDATOR_KEY as Hex,
   });
 
   const journal = makeEnvelope({
@@ -224,4 +230,7 @@ app.post("/validate", async (c) => {
   });
 });
 
-export default app;
+return app;
+}
+
+export default createApp();
