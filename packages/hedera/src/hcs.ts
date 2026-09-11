@@ -23,9 +23,32 @@ export {
 
 export type HcsAuth = {
   operatorId: string; // 0.0.xxxxx
-  operatorKey: string; // DER / hex private key
+  operatorKey: string; // DER, or raw 32-byte hex — see parseOperatorKey
   network?: "testnet" | "mainnet" | "previewnet";
 };
+
+/**
+ * Accept either form the Hedera portal shows you.
+ *
+ * The portal displays a "HEX Encoded Private Key" and a "DER Encoded Private
+ * Key" for the same account, and the rest of this repo needs the HEX one,
+ * because Foundry and viem cannot read DER. Requiring DER here meant the one
+ * value in `.env` had to be in the format the EVM tooling rejects, so either
+ * the deploy or the journaler was always going to fail, whichever the user
+ * pasted. `fromStringDer` throws on raw hex with a message about ASN.1 that
+ * points nowhere near the actual problem.
+ *
+ * Raw hex is ECDSA here, not ED25519. Every EVM path in this project needs a
+ * secp256k1 account, so an ED25519 key would fail two steps later anyway,
+ * with a worse error. DER carries its own curve identifier, so that branch
+ * still handles both.
+ */
+export function parseOperatorKey(key: string): PrivateKey {
+  const raw = key.trim();
+  const hex = raw.startsWith("0x") || raw.startsWith("0X") ? raw.slice(2) : raw;
+  if (/^[0-9a-fA-F]{64}$/.test(hex)) return PrivateKey.fromStringECDSA(hex);
+  return PrivateKey.fromStringDer(raw);
+}
 
 export function hcsClient(auth: HcsAuth): Client {
   const client =
@@ -34,7 +57,7 @@ export function hcsClient(auth: HcsAuth): Client {
       : auth.network === "previewnet"
         ? Client.forPreviewnet()
         : Client.forTestnet();
-  client.setOperator(auth.operatorId, PrivateKey.fromStringDer(auth.operatorKey));
+  client.setOperator(auth.operatorId, parseOperatorKey(auth.operatorKey));
   return client;
 }
 
