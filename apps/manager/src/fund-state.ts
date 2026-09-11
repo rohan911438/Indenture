@@ -33,6 +33,9 @@ export class MockFundStateProvider implements FundStateProvider {
       weights: { [ASSET_D0]: 2500, [ASSET_D1]: 2000 },
       cashBps: 4000,
       prices: { [ASSET_D0]: 100, [ASSET_D1]: 100 },
+      navQuote: "1000000000000", // 1,000,000 USDC at 6dp
+      maxPositionBps: 3000,
+      maxTradeNotional: "250000000000",
     };
   }
 }
@@ -52,6 +55,11 @@ export type MirrorFundConfig = {
   priceFeeds: Record<string, string>;
   /** the mandate's staleness tolerance, seconds */
   feedStaleAfterSec: number;
+  /** covenants, passed through so a proposer can aim inside them */
+  maxPositionBps?: number;
+  maxTradeNotional?: string;
+  /** which side of the pair the cash is on; decides the direction flag */
+  quoteIsCurrency0?: boolean;
 };
 
 /**
@@ -115,12 +123,13 @@ export class MirrorFundStateProvider implements FundStateProvider {
         // so being wrong is cheap; pretending to know a price is not, because
         // it would produce confident proposals the Validator then refuses for
         // reasons the Manager cannot see.
-        if (!reading.ok) return { asset, value: 0n, price: 0 };
+        if (!reading.ok) return { asset, value: 0n, price: 0, balance };
 
         return {
           asset,
           value: valueInQuote(balance, Number(decimals), reading, quoteDecimals),
           price: Number(reading.answer) / 10 ** reading.decimals,
+          balance,
         };
       }),
     );
@@ -133,6 +142,13 @@ export class MirrorFundStateProvider implements FundStateProvider {
       weights: Object.fromEntries(valued.map((v) => [v.asset, bps(v.value)])),
       cashBps: bps(cash),
       prices: Object.fromEntries(valued.map((v) => [v.asset, v.price])),
+      navQuote: nav.toString(),
+      quoteIsCurrency0: this.cfg.quoteIsCurrency0,
+      positions: Object.fromEntries(
+        valued.map((v) => [v.asset, { balance: v.balance.toString(), valueQuote: v.value.toString() }]),
+      ),
+      maxPositionBps: this.cfg.maxPositionBps,
+      maxTradeNotional: this.cfg.maxTradeNotional,
     };
   }
 }
