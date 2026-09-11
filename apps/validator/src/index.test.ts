@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import app from "./index.js";
+import { createApp } from "./index.js";
+
+/**
+ * An EMPTY deployment document, so the seam picks MockSources and these stay
+ * offline and deterministic. Once a real fund is deployed the committed
+ * deployments.json is populated, and importing the default app here would
+ * quietly turn every one of these into a live testnet call.
+ */
+const app = createApp({});
 import { validateRequestSchema } from "./schema.js";
 
 describe("validate boundary schema", () => {
