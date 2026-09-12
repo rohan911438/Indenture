@@ -22,8 +22,9 @@ import { HeroActions } from "./HeroActions";
  * refusal count is the header of /blocked, and the contract and topic ids are
  * in the stack section as links someone can actually follow.
  *
- * Near-black, Medium weight, and exactly one saturated colour, on the one word
- * that earns it.
+ * Paper, Medium weight, and exactly one saturated colour, on the one word that
+ * earns it — which reads 7.4:1 on this ground against 2.7:1 on the obsidian
+ * band this replaced.
  */
 export function Hero({
   banner,
@@ -76,7 +77,7 @@ export function Hero({
   );
 
   return (
-    <section ref={root} className="hero on-obsidian" aria-labelledby="hero-head">
+    <section ref={root} className="hero" aria-labelledby="hero-head">
       <div
         className="hero__bg"
         data-placeholder={banner ? undefined : "true"}
@@ -111,7 +112,7 @@ export function Hero({
           {/* Bottom-aligned with the headline's last line, so the two halves
               share a baseline instead of drifting apart down the page. */}
           <Rise className="hero__aside" start="top 95%" delay={0.25}>
-            <p className="t-prose" style={{ color: "var(--on-dark-2)", maxWidth: "44ch" }}>
+            <p className="t-prose" style={{ color: "var(--ink-2)", maxWidth: "44ch" }}>
               A Uniswap v4 hook that refuses two things a pool has never been
               able to refuse: a buyer who isn&rsquo;t qualified, and a manager
               exceeding his mandate.

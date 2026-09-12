@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { Logo } from "@/components/brand/Logo";
 import { ConnectAction } from "./ConnectAction";
 
@@ -21,22 +20,22 @@ const LINKS = [
  * turns paper, the same tokens resolve to ink.
  */
 export function PaperNav() {
-  const pathname = usePathname();
-  // Only the landing puts an obsidian band under the bar. Everywhere else the
-  // page is paper from the top, so the bar is too, immediately.
-  const overHero = pathname === "/";
-  const [stuck, setStuck] = useState(!overHero);
+  /**
+   * The bar is paper everywhere now that the hero is too. `stuck` no longer
+   * changes its colours — only whether it carries the hairline that separates
+   * it from what has scrolled up behind it.
+   */
+  const [stuck, setStuck] = useState(false);
 
   useEffect(() => {
-    if (!overHero) return;
-    const onScroll = () => setStuck(window.scrollY > window.innerHeight * 0.8);
+    const onScroll = () => setStuck(window.scrollY > 24);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [overHero]);
+  }, []);
 
   return (
-    <nav className={`nav shell${stuck ? "" : " on-obsidian"}`} data-stuck={stuck}>
+    <nav className="nav shell" data-stuck={stuck}>
       <Link href="/" aria-label="Indenture, home" className="nav__logo flex items-center">
         <Logo variant="horizontal" size={30} />
       </Link>

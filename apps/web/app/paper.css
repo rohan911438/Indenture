@@ -568,12 +568,15 @@
 /**
  * One composition, not a stack of parts.
  *
- * The previous arrangement put a four-word headline at 104px in the top-left
- * eighth of a viewport-tall black rectangle and left the rest empty. Type that
- * small in a space that large reads as a placeholder no matter what is beside
- * it, so the headline now runs the full width of the page and the band is
- * built around it: the image is the ground rather than a strip underneath,
- * the content sits low the way a poster does, and the facts close it off.
+ * The band is paper. It opened on obsidian for a while, and the argument for
+ * that was contrast — but it ruled out a light photograph, and a light
+ * photograph is what this wants. The page is now paper from the first pixel
+ * to the footer, which is also what the reference actually does: kimia's body
+ * measures pure white across 88% of its pixels.
+ *
+ * The headline runs the full width and the content sits low, the way a poster
+ * does. --refuse reads 7.4:1 on this ground against 2.7:1 on the old one, so
+ * the one saturated word on the screen is stronger here, not weaker.
  */
 .hero {
   position: relative;
@@ -584,6 +587,8 @@
   justify-content: flex-end;
   padding-block: 132px 96px;
   isolation: isolate;
+  background: var(--paper);
+  color: var(--ink);
   /* Deliberately NOT overflow:hidden. The band is allowed to grow past the
      viewport on a short screen, and clipping it here cut the fact rail in
      half. The drifting ground is contained by .hero__bg, which is absolutely
@@ -617,16 +622,16 @@
   background:
     linear-gradient(
       to top,
-      var(--obsidian) 0%,
-      rgba(6, 6, 6, 0.92) 26%,
-      rgba(6, 6, 6, 0.55) 58%,
-      rgba(6, 6, 6, 0.35) 100%
+      var(--paper) 0%,
+      rgba(255, 255, 255, 0.93) 26%,
+      rgba(255, 255, 255, 0.55) 58%,
+      rgba(255, 255, 255, 0.3) 100%
     ),
     linear-gradient(
       to right,
-      rgba(6, 6, 6, 0.8) 0%,
-      rgba(6, 6, 6, 0.3) 45%,
-      rgba(6, 6, 6, 0) 75%
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(255, 255, 255, 0.35) 45%,
+      rgba(255, 255, 255, 0) 72%
     );
 }
 /* Without a photograph the ground is the mark, very large and very quiet — a
@@ -636,12 +641,12 @@
   place-items: center;
   background: radial-gradient(
     120% 90% at 72% 35%,
-    var(--obsidian-2) 0%,
-    var(--obsidian) 68%
+    var(--paper-2) 0%,
+    var(--paper) 70%
   );
 }
 .hero__bg[data-placeholder="true"] .mark {
-  opacity: 0.16;
+  opacity: 0.1;
 }
 
 /* --- the type ----------------------------------------------------------- */
@@ -684,7 +689,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--on-dark-2);
+  color: var(--ink-3);
 }
 .hero__scroll span[aria-hidden] {
   display: inline-block;
@@ -896,14 +901,16 @@
 
 /* --- preloader ---------------------------------------------------------- */
 
+/* Paper, like the page behind it. It was obsidian while the hero was, and an
+   obsidian overlay wiping up off a white hero is a flash, not a reveal. */
 .preloader {
   position: fixed;
   inset: 0;
   z-index: 100;
   display: grid;
   place-items: center;
-  background: var(--obsidian);
-  color: var(--on-dark);
+  background: var(--paper);
+  color: var(--ink);
 }
 
 /* --- reduced motion ------------------------------------------------------ */
