@@ -525,7 +525,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  height: 72px;
+  height: 80px;
   transition:
     background-color 240ms cubic-bezier(0.16, 0.84, 0.28, 1),
     border-color 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
@@ -592,40 +592,114 @@
 
 /* --- hero --------------------------------------------------------------- */
 
+/**
+ * The kimia arrangement: a headline block, then a full-bleed banner, then the
+ * facts that back the claim. The banner is the load-bearing element — without
+ * it the band was a headline in the top-left corner of 88vh of nothing, which
+ * is what 8 of 12 columns buys you when the headline is only four words wide.
+ */
 .hero {
   position: relative;
-  min-height: 88vh;
+  min-height: 100vh;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(48px, 6vh, 88px);
   overflow: hidden;
-  padding-block: 140px 96px;
-}
-.hero__mark {
-  position: absolute;
-  /* Lifted clear of the fact rail and the scroll cue, into the empty band to
-     the right of the headline. Decorative, low contrast, and over nothing. */
-  right: clamp(16px, 3vw, 56px);
-  bottom: 170px;
-  opacity: 0.16;
-  pointer-events: none;
-  user-select: none;
+  /* The rail is the last thing in the band, and it was sitting on the seam
+     with the paper. */
+  padding-block: 132px 36px;
 }
 .hero__grid {
   display: grid;
   grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
   gap: 24px;
-  align-items: start;
+  align-items: end;
   width: 100%;
   position: relative;
   z-index: 1;
 }
+
+/* --- the banner --------------------------------------------------------- */
+
+/* Edge to edge, outside .shell — the one element on the page that is allowed
+   to touch both sides of the viewport. */
+.hero__banner {
+  position: relative;
+  width: 100%;
+  height: clamp(220px, 34vh, 420px);
+  background: var(--obsidian-2);
+  border-top: 1px solid var(--rule-dark);
+  border-bottom: 1px solid var(--rule-dark);
+  overflow: hidden;
+}
+.hero__banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* A wash toward the band's own black at both ends, so the banner reads as part
+   of the hero rather than as a picture someone dropped into it. */
+.hero__banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--obsidian) 0%,
+    rgba(6, 6, 6, 0) 22%,
+    rgba(6, 6, 6, 0) 78%,
+    var(--obsidian) 100%
+  );
+}
+/* Until the photograph lands: the mark, very large and very quiet, on the
+   band's own ground. Deliberate rather than empty. */
+.hero__banner[data-placeholder="true"] {
+  display: grid;
+  place-items: center;
+}
+.hero__banner[data-placeholder="true"] .mark {
+  opacity: 0.2;
+}
+
+/* --- built on ----------------------------------------------------------- */
+
+.hero__built {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 8px;
+}
+/* The eyebrow in this column is a <p> too, and a bare `.hero__built p` was
+   outranking .t-eyebrow at equal specificity and setting it 26px. */
+.hero__built p:not(.t-eyebrow) {
+  font-size: clamp(20px, 1.5vw, 26px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--on-dark-2);
+  margin: 0;
+}
+
 @media (max-width: 1023px) {
+  .hero {
+    padding-block: 108px 28px;
+    min-height: auto;
+  }
   .hero__grid {
     grid-template-columns: 1fr;
-    gap: 64px;
+    gap: 56px;
+    align-items: start;
   }
-  .hero__mark {
-    display: none;
+  .hero__built {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    padding-bottom: 0;
+  }
+  .hero__banner {
+    height: clamp(180px, 26vh, 260px);
   }
 }
 

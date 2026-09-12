@@ -12,6 +12,8 @@ import { Stack } from "@/components/paper/Stack";
 import { PaperFooter } from "@/components/paper/PaperFooter";
 import { deployments } from "@/lib/deployments";
 import { getBlocked, getMandate } from "@/lib/data";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * The landing page.
@@ -50,6 +52,19 @@ export default async function LandingPage() {
     },
   ];
 
+  /**
+   * The hero banner, if one has been dropped in.
+   *
+   * Checked on disk rather than assumed, so a missing file is a designed
+   * placeholder rather than a broken image — and so the photograph can be
+   * added by copying it into public/ with no code change at all. First match
+   * wins, best format first.
+   */
+  const banner =
+    ["hero.avif", "hero.webp", "hero.jpg", "hero.jpeg", "hero.png"]
+      .map((name) => ({ name, path: join(process.cwd(), "public", name) }))
+      .find((f) => existsSync(f.path))?.name ?? null;
+
   const facts = [
     {
       label: "Network",
@@ -73,7 +88,7 @@ export default async function LandingPage() {
 
       <main id="main">
         <TickerBar figures={figures} />
-        <Hero facts={facts} />
+        <Hero facts={facts} banner={banner ? `/${banner}` : null} />
         <Incident />
         <Terminal />
         <Refusals />

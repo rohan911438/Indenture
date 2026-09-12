@@ -38,7 +38,7 @@ export function PaperNav() {
   return (
     <nav className={`nav shell${stuck ? "" : " on-obsidian"}`} data-stuck={stuck}>
       <Link href="/" aria-label="Indenture, home" className="nav__logo flex items-center">
-        <Logo variant="horizontal" size={24} />
+        <Logo variant="horizontal" size={30} />
       </Link>
 
       <div className="nav__links">

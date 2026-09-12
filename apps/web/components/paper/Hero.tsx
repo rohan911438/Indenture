@@ -16,45 +16,87 @@ export type HeroFact = { label: string; value: string };
 /**
  * The hero — the one monumental, two-colour moment on the site.
  *
+ * Arranged the way kimia arranges its own: a headline block, a full-bleed
+ * banner, then the facts that back the claim. The banner is doing real work.
+ * Before it, the band was a four-word headline in the top-left corner of a
+ * viewport-tall black rectangle, and no amount of type scale fixes that — a
+ * short headline needs something beside it.
+ *
  * Near-black, Medium display weight, and exactly one saturated colour, on the
  * one word that earns it. Everything below this band is paper, and the change
- * is a hard edge: the band simply ends. A gradient between them would turn two
- * deliberate surfaces into one indecisive one.
- *
- * The band closes on a rail of instrument facts. Without it the lower half of
- * 88vh was empty, and the claim at the top was asking to be taken on trust
- * while the addresses that back it sat three sections further down.
+ * is a hard edge: the band simply ends.
  */
-export function Hero({ facts }: { facts: HeroFact[] }) {
+export function Hero({
+  facts,
+  banner,
+}: {
+  facts: HeroFact[];
+  /** the banner photograph, or null until one is dropped into public/ */
+  banner: string | null;
+}) {
   const root = useRef<HTMLElement>(null);
 
   useGSAP(
     () => {
       if (prefersReducedMotion()) return;
-      const mark = root.current?.querySelector(".hero__mark .mark");
-      if (!mark) return;
-      // 0.4°/s. Slow enough to be a thing you notice only on the second look.
-      const spin = gsap.to(mark, {
-        rotation: 360,
-        duration: 900,
-        ease: "none",
-        repeat: -1,
-      });
-      return () => spin.kill();
+      const el = root.current;
+      if (!el) return;
+
+      const placeholder = el.querySelector(
+        ".hero__banner[data-placeholder='true'] .mark",
+      );
+      if (placeholder) {
+        // 0.4°/s — slow enough to be a thing you notice only on the second look.
+        const spin = gsap.to(placeholder, {
+          rotation: 360,
+          duration: 900,
+          ease: "none",
+          repeat: -1,
+        });
+        return () => spin.kill();
+      }
+
+      // With a photograph in place the band drifts against the scroll instead,
+      // which reads as depth rather than as an animation.
+      const img = el.querySelector(".hero__banner img");
+      if (!img) return;
+      const drift = gsap.fromTo(
+        img,
+        { scale: 1.08, yPercent: -2 },
+        {
+          scale: 1,
+          yPercent: 2,
+          ease: "none",
+          scrollTrigger: {
+            trigger: el.querySelector(".hero__banner"),
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 1,
+          },
+        },
+      );
+      return () => {
+        drift.scrollTrigger?.kill();
+        drift.kill();
+      };
     },
     { scope: root },
   );
 
   return (
     <section ref={root} className="hero on-obsidian" aria-labelledby="hero-head">
-      <div className="hero__mark" aria-hidden="true">
-        <Mark size={240} />
-      </div>
-
       <div className="shell">
         <div className="hero__grid">
           <div>
-            <Reveal as="h1" className="t-display-xl" id="hero-head" start="top 95%">
+            <Eyebrow>A Uniswap v4 hook on Hedera</Eyebrow>
+
+            <Reveal
+              as="h1"
+              className="t-display-xl"
+              id="hero-head"
+              start="top 95%"
+              delay={0.05}
+            >
               The pool
               <br />
               that says
@@ -62,7 +104,7 @@ export function Hero({ facts }: { facts: HeroFact[] }) {
               <span style={{ color: "var(--refuse)" }}>no.</span>
             </Reveal>
 
-            <Rise className="mt-10 flex flex-col gap-12" start="top 95%" delay={0.25}>
+            <Rise className="mt-10 flex flex-col gap-10" start="top 95%" delay={0.25}>
               <p
                 className="t-prose"
                 style={{ color: "var(--on-dark-2)", maxWidth: "52ch" }}
@@ -83,24 +125,30 @@ export function Hero({ facts }: { facts: HeroFact[] }) {
             </Rise>
           </div>
 
-          {/* Aligned to the headline's first baseline, not to the top of its box. */}
-          <Rise className="flex flex-col gap-6 lg:pt-6" start="top 95%" delay={0.4}>
+          {/* Bottom-aligned with the actions, so the two columns share a
+              baseline instead of starting level and drifting apart. */}
+          <Rise className="hero__built" start="top 95%" delay={0.4}>
             <Eyebrow>Built on</Eyebrow>
             {BUILT_ON.map((name) => (
-              <p
-                key={name}
-                style={{
-                  fontSize: 28,
-                  fontWeight: 500,
-                  letterSpacing: "-0.02em",
-                  color: "var(--on-dark-2)",
-                }}
-              >
-                {name}
-              </p>
+              <p key={name}>{name}</p>
             ))}
           </Rise>
         </div>
+      </div>
+
+      <div className="hero__banner" data-placeholder={banner ? undefined : "true"}>
+        {banner ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={banner}
+            alt=""
+            /* Decorative: everything it says is said in words above it. */
+            aria-hidden="true"
+            fetchPriority="high"
+          />
+        ) : (
+          <Mark size={200} />
+        )}
       </div>
 
       <div className="shell hero__foot">
