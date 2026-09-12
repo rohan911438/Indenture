@@ -18,6 +18,7 @@ import {
   type Connector,
 } from "wagmi";
 import { FUND_CHAIN_ID, FUND_CHAIN_NAME, wagmiConfig } from "@/lib/wagmi";
+import { WalletModal } from "./WalletModal";
 
 export type Identity = {
   address: string;
@@ -234,7 +235,8 @@ function WalletState({
     isConnected,
     connectorName: connector?.name ?? null,
     chainId,
-    wrongChain: isConnected && chainId !== undefined && chainId !== FUND_CHAIN_ID,
+    wrongChain:
+      isConnected && chainId !== undefined && chainId !== FUND_CHAIN_ID,
     connectors,
     connect: doConnect,
     disconnect: () => {
@@ -263,5 +265,12 @@ function WalletState({
     closeModal: () => setModalOpen(false),
   };
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      {children}
+      {/* Mounted here so every chrome that can call openModal has the picker
+          on the page, whichever layout it is sitting in. */}
+      <WalletModal />
+    </Ctx.Provider>
+  );
 }
