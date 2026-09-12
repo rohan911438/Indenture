@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ElementType, type ReactNode } from "react";
-import { gsap, useGSAP, registerPaperGsap } from "./gsapPaper";
+import { gsap, useGSAP, registerPaperGsap, prefersReducedMotion } from "./gsapPaper";
 import { D, E, STAGGER } from "@/lib/motion";
 
 /**
@@ -35,6 +35,18 @@ export function Rise({
       const el = ref.current;
       if (!el) return;
       registerPaperGsap();
+
+      /**
+       * Under reduced motion nothing is built at all.
+       *
+       * `gsap.from` sets its start values the moment it is created, so a
+       * scroll-triggered reveal hides its target immediately and only restores
+       * it when the trigger fires. That is the intended masking behaviour with
+       * motion on, and content that is simply invisible with motion off — so
+       * the tween must not exist rather than merely run fast.
+       */
+      if (prefersReducedMotion()) return;
+
       const kids = Array.from(el.children);
       if (!kids.length) return;
 

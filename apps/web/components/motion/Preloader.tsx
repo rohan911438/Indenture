@@ -33,7 +33,12 @@ export function PreloaderFlag() {
 }
 
 /**
- * First visit only, under two seconds, skippable on click.
+ * First visit only, about 1.4 seconds, skippable on click.
+ *
+ * The length is not a style choice. The overlay covers the viewport, so it IS
+ * the largest contentful paint on a first visit, and every extra beat here is a
+ * second of the hero nobody sees. 1.4s still reads as an intro and leaves most
+ * of the 2.2s ceiling unspent.
  *
  * The halves wipe on from the outside and meet at the seam — the two pieces of
  * the instrument being brought together — while a counter runs to 100. The
@@ -75,20 +80,20 @@ export function Preloader() {
       tl.fromTo(
         mark,
         { "--wipe-a": "100%" },
-        { "--wipe-a": "44.9%", duration: 0.9, ease: E.inOut },
+        { "--wipe-a": "44.9%", duration: 0.62, ease: E.inOut },
         0,
       )
         .fromTo(
           mark,
           { "--wipe-b": "100%" },
-          { "--wipe-b": "55.1%", duration: 0.9, ease: E.inOut },
-          0.12,
+          { "--wipe-b": "55.1%", duration: 0.62, ease: E.inOut },
+          0.1,
         )
         .to(
           n,
           {
             v: 100,
-            duration: 1,
+            duration: 0.72,
             ease: E.inOut,
             snap: { v: 1 },
             onUpdate: () => {
@@ -97,8 +102,8 @@ export function Preloader() {
           },
           0,
         )
-        .to(mark, { scale: 1.06, duration: 0.2, ease: E.out })
-        .to(el, { clipPath: "inset(0 0 100% 0)", duration: D.md, ease: E.big });
+        .to(mark, { scale: 1.06, duration: 0.16, ease: E.out })
+        .to(el, { clipPath: "inset(0 0 100% 0)", duration: D.sm + 0.1, ease: E.big });
 
       skip.current = () => tl.progress(1);
       return () => tl.kill();

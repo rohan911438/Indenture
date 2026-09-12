@@ -91,12 +91,6 @@ export default async function RootLayout({
        */
       suppressHydrationWarning
     >
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap"
-        />
-      </head>
       <body>
         {/* Runs before first paint, so nothing a choreography is about to
             reveal is ever visible unanimated for a frame. */}

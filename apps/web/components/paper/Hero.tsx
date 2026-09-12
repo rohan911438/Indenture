@@ -103,7 +103,7 @@ export function Hero({ facts }: { facts: HeroFact[] }) {
         </div>
       </div>
 
-      <div className="shell">
+      <div className="shell hero__foot">
         <Rise as="dl" className="hero__rail" start="top 98%" stagger={0.05}>
           {facts.map((f) => (
             <div key={f.label} className="hero__fact">
@@ -111,11 +111,13 @@ export function Hero({ facts }: { facts: HeroFact[] }) {
               <dd className="t-data">{f.value}</dd>
             </div>
           ))}
-          <div className="hero__scroll t-data-sm">
-            <span>SCROLL</span>
-            <span aria-hidden="true">↓</span>
-          </div>
         </Rise>
+        {/* Outside the list: a dl may only hold dt/dd groups, and this is an
+            instruction rather than a fact about the deployment. */}
+        <div className="hero__scroll t-data-sm">
+          <span>SCROLL</span>
+          <span aria-hidden="true">↓</span>
+        </div>
       </div>
     </section>
   );

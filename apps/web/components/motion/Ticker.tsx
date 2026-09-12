@@ -42,7 +42,7 @@ export function Ticker({
   );
 
   return (
-    <div ref={ref} className={`ticker ${className}`}>
+    <div ref={ref} className={`ticker on-obsidian ${className}`}>
       <div className="ticker__track">
         <div className="ticker__run">{children}</div>
         <div className="ticker__run" aria-hidden="true">

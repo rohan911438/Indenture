@@ -20,6 +20,7 @@
  * re-derived rather than asserted.
  */
 import mandateMock from "@/mocks/mandate.json";
+import mandateHistoryMock from "@/mocks/mandate-history.json";
 import journalMock from "@/mocks/journal-entries.json";
 import blockedMock from "@/mocks/blocked-attempts.json";
 import sharesMock from "@/mocks/shares-state.json";
@@ -37,6 +38,7 @@ import {
   weightBps,
 } from "@/lib/live";
 import type {
+  MandateBody,
   ContextBody,
   CovenantValues,
   JournalRow,
@@ -62,6 +64,34 @@ const NOT_DEPLOYED = "no deployment yet — showing sample data";
 
 function why(e: unknown): string {
   return `live read failed: ${e instanceof Error ? e.message : String(e)}`;
+}
+
+/** How long any one live read may hold a page up before the seam gives up. */
+const DEADLINE_MS = 4000;
+
+/**
+ * A live read, bounded.
+ *
+ * The mirror node is reached with a plain fetch inside @indenture/hedera, which
+ * carries no timeout, so an unreachable host hangs on DNS or connect for as
+ * long as the platform allows — a build with no network sat on this for ten
+ * minutes and produced nothing, with the fixture that would have rendered the
+ * page sitting in the repo the entire time.
+ *
+ * This does not cancel the request; it stops waiting on it. That is the whole
+ * requirement: every page must render from seeded data with no chain
+ * connection, and a page that renders eventually does not meet it.
+ */
+function withDeadline<T>(work: Promise<T>, label: string): Promise<T> {
+  return Promise.race([
+    work,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${label} did not answer within ${DEADLINE_MS}ms`)),
+        DEADLINE_MS,
+      ).unref?.(),
+    ),
+  ]);
 }
 
 /** True when nothing on the page can be read from a real source yet. */
@@ -146,7 +176,7 @@ function mandateFromMock(): MandateView {
 export async function getMandate(): Promise<Sourced<MandateView>> {
   if (!MANDATE_TOPIC) return sample(mandateFromMock(), NOT_DEPLOYED);
   try {
-    const m = await liveMandate(MANDATE_TOPIC, MIRROR_URL);
+    const m = await withDeadline(liveMandate(MANDATE_TOPIC, MIRROR_URL), "mandate topic");
     return live({
       ...m.covenants,
       mandateHash: m.mandateHash,
@@ -160,15 +190,57 @@ export async function getMandate(): Promise<Sourced<MandateView>> {
   }
 }
 
-export async function getJournal(): Promise<Sourced<JournalRow[]>> {
-  if (!JOURNAL_TOPIC) {
-    return sample(joinRows(journalMock as unknown as TopicMessage[]), NOT_DEPLOYED);
-  }
+/** One published version of the mandate, and what changed when it landed. */
+export interface MandateAmendment {
+  seq: number;
+  ts: number;
+  action: "ADOPTED" | "AMENDED";
+  mandateHash: string;
+  prevMandateHash: string | null;
+  covenants: CovenantValues;
+}
+
+function amendmentsFrom(messages: TopicMessage[]): MandateAmendment[] {
+  return messages
+    .filter((m) => m.envelope?.type === "MANDATE")
+    .map((m) => {
+      const b = m.envelope!.body as MandateBody;
+      return {
+        seq: m.sequenceNumber,
+        ts: m.envelope!.ts,
+        action: b.action,
+        mandateHash: b.mandateHash,
+        prevMandateHash: b.prevMandateHash,
+        covenants: b.covenants,
+      };
+    })
+    .sort((a, b) => b.seq - a.seq);
+}
+
+/**
+ * Every version of the mandate this fund has published, newest first.
+ *
+ * The mandate topic holds the whole chain, not just the current terms, so this
+ * reads the same topic getMandate() reads and keeps all of it. An instrument
+ * whose terms can change without a record of the change is not an instrument,
+ * and the amendment list is how a reader checks that the covenants being
+ * enforced today are the ones that were agreed.
+ */
+export async function getMandateHistory(): Promise<Sourced<MandateAmendment[]>> {
+  const fallback = () =>
+    amendmentsFrom(mandateHistoryMock as unknown as TopicMessage[]);
+
+  if (!MANDATE_TOPIC) return sample(fallback(), NOT_DEPLOYED);
   try {
-    const messages = await liveJournal(JOURNAL_TOPIC, MIRROR_URL);
-    return live(joinRows(messages as unknown as TopicMessage[]));
+    const messages = await withDeadline(liveJournal(MANDATE_TOPIC, MIRROR_URL), "mandate topic");
+    const rows = amendmentsFrom(messages as unknown as TopicMessage[]);
+    // A topic that answers but holds no MANDATE envelope yet is a deploy that
+    // has not published its terms. Saying "no amendments" there would read as
+    // "never amended", which is a different and much stronger claim.
+    if (rows.length === 0) return sample(fallback(), "mandate topic holds no published terms yet");
+    return live(rows);
   } catch (e) {
-    return sample(joinRows(journalMock as unknown as TopicMessage[]), why(e));
+    return sample(fallback(), why(e));
   }
 }
 
@@ -178,6 +250,41 @@ const refusalsAndBreaches = (rows: JournalRow[]) =>
       r.type === "BREACH" ||
       (r.type === "RECEIPT" && (r.body as ReceiptBody).decision === "REFUSED"),
   );
+
+/**
+ * The record, live where there is one.
+ *
+ * One rule decides it, here, once — so the ticker, /journal and /blocked can
+ * never disagree about which record they are showing. The live topic wins when
+ * it holds at least one refusal or breach; otherwise the seeded record is used
+ * and every page that shows it says so.
+ *
+ * The threshold is a refusal rather than a row because a wall with nothing on
+ * it demonstrates nothing. A freshly deployed fund whose manager has not yet
+ * tried anything it should not is the honest state of the chain and a useless
+ * state of the argument, and the choice between them is not one to make
+ * silently: `live` is false and the note says exactly why.
+ */
+export async function getJournal(): Promise<Sourced<JournalRow[]>> {
+  const seeded = () => joinRows(journalMock as unknown as TopicMessage[]);
+
+  if (!JOURNAL_TOPIC) return sample(seeded(), NOT_DEPLOYED);
+
+  try {
+    const messages = await withDeadline(liveJournal(JOURNAL_TOPIC, MIRROR_URL), "journal topic");
+    const rows = joinRows(messages as unknown as TopicMessage[]);
+    const refusals = refusalsAndBreaches(rows);
+    if (refusals.length === 0) {
+      return sample(
+        seeded(),
+        `journal topic ${JOURNAL_TOPIC} is live and holds ${rows.length} decision${rows.length === 1 ? "" : "s"}, none of them a refusal yet`,
+      );
+    }
+    return live(rows);
+  } catch (e) {
+    return sample(seeded(), why(e));
+  }
+}
 
 export async function getBlocked(): Promise<Sourced<JournalRow[]>> {
   if (!JOURNAL_TOPIC) {
@@ -210,9 +317,9 @@ export async function getCovenantStatus(): Promise<Sourced<CovenantStatus[]>> {
     // Limits come from the hook, current values from the fund. Reading the
     // limits off the mandate instead would hide the one discrepancy that
     // matters: a mandate published to HCS but never amended into the policy.
-    const chain = await liveCovenants(cfg);
+    const chain = await withDeadline(liveCovenants(cfg), "the JSON-RPC relay");
     const feeds = MANDATE_TOPIC
-      ? await liveMandate(MANDATE_TOPIC, MIRROR_URL)
+      ? await withDeadline(liveMandate(MANDATE_TOPIC, MIRROR_URL), "mandate topic")
       : null;
     if (!feeds) throw new Error("no mandate topic — cannot price the portfolio");
 
@@ -334,8 +441,8 @@ export async function getSharesState(): Promise<Sourced<SharesState>> {
   }
 
   try {
-    const chain = await liveCovenants(cfg);
-    const mandate = MANDATE_TOPIC ? await liveMandate(MANDATE_TOPIC, MIRROR_URL) : null;
+    const chain = await withDeadline(liveCovenants(cfg), "the JSON-RPC relay");
+    const mandate = MANDATE_TOPIC ? await withDeadline(liveMandate(MANDATE_TOPIC, MIRROR_URL), "mandate topic") : null;
     if (!mandate) throw new Error("no mandate topic — cannot value the fund");
 
     const v = await liveValuation(cfg, mandate.priceFeeds, mandate.feedStaleAfterSec);

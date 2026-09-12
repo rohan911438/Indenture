@@ -1,4 +1,38 @@
 /**
+ * Satoshi, self-hosted.
+ *
+ * It was loaded from Fontshare, which cost 520ms of render-blocking third-party
+ * stylesheet. Loading that asynchronously removed the block but pushed the
+ * largest paint out to the swap, because the headline is the LCP element and it
+ * changed face a second in. Serving the three weights from this origin removes
+ * the round trip instead of rescheduling it: no preconnect, no blocking, no
+ * swap worth measuring.
+ *
+ * ITF Free Font License — self-hosting is permitted.
+ */
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/satoshi-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/**
  * The paper system — FRONTEND.md §4.
  *
  * Every token here is scoped to .paper-root rather than :root. The site still
@@ -18,7 +52,10 @@
   --paper-2: #fafaf9; /* recessed panel only */
   --ink: #292521; /* THE colour. warm brown-black, never #000 */
   --ink-2: #6b645c;
-  --ink-3: #9a938b; /* eyebrows, timestamps, disabled */
+  /* Darkened from the measured #9A938B, which reads 3.03:1 on white and so
+     failed every eyebrow, caption and timestamp on the site. This is 4.54:1,
+     the same warm grey, and still a clear third step below --ink-2. */
+  --ink-3: #7c756d; /* eyebrows, timestamps, disabled */
   --rule: #ededed; /* full-bleed section rules */
   --border: #d9d6d2; /* component borders, table lines */
 
@@ -70,10 +107,12 @@
   --ink-3: var(--on-dark-2);
   --rule: var(--rule-dark);
   --border: var(--rule-dark);
-  /* --permit measures about 2.6:1 against obsidian, which is not enough for
-     the focus ring or for the one green figure in the ticker. The dark bands
-     get the lit value; the hue and the meaning are unchanged. */
+  /* Both meaning colours are mixed for paper and are far too dark on obsidian
+     — --permit measures 3.18:1 there and --refuse 2.73:1, which fails even the
+     large-text threshold the hero's "no." needs. The dark bands get lit values;
+     the hues and the meanings are unchanged. */
   --permit: #5fb89b;
+  --refuse: #d4565e;
   background: var(--obsidian);
   color: var(--on-dark);
   color-scheme: dark;
@@ -452,6 +491,8 @@
 .ticker {
   height: 48px;
   background: var(--obsidian);
+  /* Carries .on-obsidian in the markup so its one green figure resolves against
+     the right ground; this stays for anything that renders it bare. */
   color: var(--on-dark);
   overflow: hidden;
   display: flex;
@@ -848,12 +889,22 @@ html[data-preload="1"] .preloader {
   justify-content: space-between;
   gap: 96px;
 }
-.hero__rail {
+/* The rule and the row live on the wrapper, so the facts can be a real <dl>
+   and the scroll cue — which is an instruction, not a fact — can sit beside it
+   without being a child of the list. */
+.hero__foot {
   position: relative;
   z-index: 1;
-  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
   border-top: 1px solid var(--rule-dark);
   padding-top: 24px;
+}
+.hero__rail {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 12px 64px;
@@ -898,5 +949,366 @@ html[data-preload="1"] .preloader {
   }
   .hero__scroll {
     display: none;
+  }
+}
+
+/* --- the seal gate ------------------------------------------------------ */
+
+.gate {
+  position: relative;
+  min-height: 70vh;
+}
+/* The route renders in full underneath. A judge can see the shape of what is
+   behind the gate before deciding whether to open it, which is the difference
+   between a locked door and a blank one. */
+.gate__behind[data-locked="true"] {
+  filter: blur(7px);
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.5;
+}
+.gate__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: start center;
+  padding-top: clamp(48px, 12vh, 160px);
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+.gate__panel {
+  width: min(480px, calc(100vw - 2 * var(--gutter)));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--paper);
+  padding: 48px 40px 40px;
+  text-align: center;
+  box-shadow: var(--lift);
+}
+.gate__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 32px;
+}
+.gate__actions .btn {
+  width: 100%;
+}
+
+/* The chip that says the figures below are seeded. It is never subtle: a page
+   showing sample data has to say so where the data is, not in a footnote. */
+.demo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding-inline: 8px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--watch) 24%, transparent);
+  background: var(--watch-bg);
+  color: var(--watch);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* --- the wall ----------------------------------------------------------- */
+
+.blocked {
+  padding: 48px 0;
+  border-bottom: 1px solid var(--border);
+}
+.blocked__head {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 32px;
+  align-items: start;
+}
+.blocked__meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin: 0;
+}
+.blocked__meta dt {
+  color: var(--ink-3);
+  letter-spacing: 0.12em;
+}
+.blocked__meta dd {
+  margin: 6px 0 0;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.blocked__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: color 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.blocked__toggle:hover {
+  color: var(--ink);
+}
+/* The recessed panel — one of the very few places --paper-2 is used. */
+.blocked__prompt {
+  margin-top: 20px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--paper-2);
+}
+@media (max-width: 1023px) {
+  .blocked__head {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .blocked__meta {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* --- page header -------------------------------------------------------- */
+
+.page-head {
+  padding-bottom: clamp(48px, 6vw, 88px);
+}
+.page-head__chips {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* --- gauge -------------------------------------------------------------- */
+
+.gauge__track {
+  position: relative;
+  height: 6px;
+  background: var(--rule);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.gauge__fill {
+  position: absolute;
+  /* Full width, then scaled. Auto on the right gave the element no width at
+     all, so scaleX had nothing to scale and every gauge read as empty. */
+  inset: 0;
+  border-radius: 3px;
+  transform-origin: left center;
+}
+/* The limit itself, drawn on the track. A bar with no line on it can only say
+   "quite full"; this says what it is full OF. */
+.gauge__tick {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--ink-3);
+}
+
+/* --- clauses ------------------------------------------------------------ */
+
+.clause {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 24px;
+  padding: 32px 0;
+  border-top: 1px solid var(--rule);
+}
+.clause:first-child {
+  border-top: 0;
+}
+.clause__n {
+  color: var(--ink-3);
+  padding-top: 8px;
+}
+.sticky-rail {
+  position: sticky;
+  top: 104px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+@media (max-width: 1023px) {
+  .clause {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .sticky-rail {
+    position: static;
+  }
+}
+
+/* --- data table --------------------------------------------------------- */
+
+/* No radius, no zebra. A ledger is ruled, not striped. */
+.dt {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.dt th {
+  text-align: left;
+  padding: 0 16px 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.dt td {
+  height: 40px;
+  padding: 0 16px 0 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.dt tbody tr {
+  transition: background-color 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.dt tbody tr:hover {
+  background: var(--paper-2);
+}
+.dt tbody tr:hover .dot {
+  transform: scale(1.4);
+}
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+  transition: transform 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.dt__scroll {
+  overflow-x: auto;
+}
+
+/* --- filter chips ------------------------------------------------------- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* --- the mechanism ------------------------------------------------------ */
+
+.mech {
+  position: relative;
+}
+/* While pinned the section owns the viewport, so its content is centred in it
+   rather than sitting against the top with 300px of nothing underneath. */
+@media (min-width: 1024px) {
+  .mech {
+    min-height: calc(100vh - 180px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+.mech__rail {
+  position: relative;
+  margin-top: 88px;
+}
+/**
+ * The connector sits behind the stages and draws as you advance.
+ *
+ * It spans node centre to node centre, not edge to edge. The nodes sit at the
+ * start of each of five 1fr columns with a 24px gap, so the first centre is
+ * 11px in and the last is one column width minus 11px from the right — running
+ * the line the full width instead left it finishing a third of a column short
+ * of the stage it was supposed to be pointing at.
+ */
+.mech__line {
+  position: absolute;
+  left: 11px;
+  right: calc((100% - 96px) / 5 - 11px);
+  top: 11px;
+  height: 2px;
+  overflow: visible;
+}
+.mech__stages {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 24px;
+}
+.mech__stage {
+  padding-right: 24px;
+}
+.mech__node {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  transition:
+    border-color 240ms cubic-bezier(0.16, 0.84, 0.28, 1),
+    color 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.mech__stage[data-active="true"] .mech__node {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.mech__title {
+  margin-top: 28px;
+  color: var(--ink-3);
+  transition: color 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.mech__stage[data-active="true"] .mech__title {
+  color: var(--ink);
+}
+.mech__body {
+  margin-top: 16px;
+  color: var(--ink-3);
+  transition: color 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.mech__stage[data-active="true"] .mech__body {
+  color: var(--ink-2);
+}
+
+/* Below the pin breakpoint the same five stages are a list, and nothing is
+   pinned: a pinned section on a phone is a section you cannot scroll past. */
+@media (max-width: 1023px) {
+  .mech__rail {
+    margin-top: 48px;
+  }
+  .mech__line {
+    display: none;
+  }
+  .mech__stages {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .mech__stage {
+    padding: 28px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .mech__stage:first-child {
+    border-top: 0;
+  }
+  .mech__stage[data-active] .mech__title,
+  .mech__stage[data-active] .mech__body {
+    color: var(--ink);
+  }
+  .mech__body {
+    color: var(--ink-2);
   }
 }

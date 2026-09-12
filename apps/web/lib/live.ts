@@ -107,7 +107,17 @@ export function chainConfig(doc: typeof deployments = deployments): ChainConfig 
  * live, and none of it should need a live chain to pin down.
  */
 function client(cfg: ChainConfig, transport?: Transport) {
-  return createPublicClient({ transport: transport ?? http(cfg.rpcUrl) });
+  return createPublicClient({
+    /**
+     * Bounded, and not retried.
+     *
+     * viem defaults to a 10s timeout and three retries, so a relay that is slow
+     * or unreachable costs about thirty seconds per read — which a build spends
+     * before it can render a page whose fallback was sitting in the repo the
+     * whole time. One attempt, three seconds, then the seeded record.
+     */
+    transport: transport ?? http(cfg.rpcUrl, { timeout: 3000, retryCount: 0 }),
+  });
 }
 
 // --- HCS -------------------------------------------------------------------

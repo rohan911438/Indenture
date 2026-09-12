@@ -7,6 +7,7 @@ import { Hero } from "@/components/paper/Hero";
 import { Incident } from "@/components/paper/Incident";
 import { Terminal } from "@/components/paper/Terminal";
 import { Refusals } from "@/components/paper/Refusals";
+import { Mechanism } from "@/components/paper/Mechanism";
 import { Stack } from "@/components/paper/Stack";
 import { PaperFooter } from "@/components/paper/PaperFooter";
 import { deployments } from "@/lib/deployments";
@@ -76,6 +77,7 @@ export default async function LandingPage() {
         <Incident />
         <Terminal />
         <Refusals />
+        <Mechanism />
         <Stack />
       </main>
 

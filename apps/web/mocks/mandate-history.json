@@ -1,0 +1,71 @@
+[
+  {
+    "sequenceNumber": 1,
+    "consensusTimestamp": "1756000000.000000000",
+    "raw": "",
+    "envelope": {
+      "v": 1,
+      "type": "MANDATE",
+      "vault": "0x3be7042D043924CC4114859a66b6a3Fc43b69047",
+      "ts": 1756000000,
+      "body": {
+        "action": "ADOPTED",
+        "mandateHash": "0x8cc6dc5961c8243d0ca6448b7a46b2c1c1d853d99579df28ce5b9c32e7c0148c",
+        "yaml": "version: 1\nname: Fund One\nvault: \"0x00000000000000000000000000000000000000b0\"\nquote: \"0x00000000000000000000000000000000000000c0\"\ncovenants:\n  maxPositionBps: 3000\n  minCashBps: 1000\n  maxTradeNotional: \"250000000000\"\n  maxDailyNotional: \"1000000000000\"\nuniverse:\n  - \"0x00000000000000000000000000000000000000d0\"\n  - \"0x00000000000000000000000000000000000000d1\"\npriceFeeds:\n  \"0x00000000000000000000000000000000000000d0\": \"0x00000000000000000000000000000000000000e0\"\n  \"0x00000000000000000000000000000000000000d1\": \"0x00000000000000000000000000000000000000e1\"\n",
+        "covenants": {
+          "maxPositionBps": 2500,
+          "minCashBps": 1500,
+          "maxTradeNotional": "200000000000",
+          "maxDailyNotional": "800000000000"
+        },
+        "prevMandateHash": null
+      }
+    }
+  },
+  {
+    "sequenceNumber": 4,
+    "consensusTimestamp": "1756260000.000000000",
+    "raw": "",
+    "envelope": {
+      "v": 1,
+      "type": "MANDATE",
+      "vault": "0x3be7042D043924CC4114859a66b6a3Fc43b69047",
+      "ts": 1756260000,
+      "body": {
+        "action": "AMENDED",
+        "mandateHash": "0x0f69f6da43d01681dfdd3d78c0196324f7914a6dd245c03de939c6653475e9ff",
+        "yaml": "version: 1\nname: Fund One\nvault: \"0x00000000000000000000000000000000000000b0\"\nquote: \"0x00000000000000000000000000000000000000c0\"\ncovenants:\n  maxPositionBps: 3000\n  minCashBps: 1000\n  maxTradeNotional: \"250000000000\"\n  maxDailyNotional: \"1000000000000\"\nuniverse:\n  - \"0x00000000000000000000000000000000000000d0\"\n  - \"0x00000000000000000000000000000000000000d1\"\npriceFeeds:\n  \"0x00000000000000000000000000000000000000d0\": \"0x00000000000000000000000000000000000000e0\"\n  \"0x00000000000000000000000000000000000000d1\": \"0x00000000000000000000000000000000000000e1\"\n",
+        "covenants": {
+          "maxPositionBps": 3000,
+          "minCashBps": 1500,
+          "maxTradeNotional": "200000000000",
+          "maxDailyNotional": "800000000000"
+        },
+        "prevMandateHash": "0x8cc6dc5961c8243d0ca6448b7a46b2c1c1d853d99579df28ce5b9c32e7c0148c"
+      }
+    }
+  },
+  {
+    "sequenceNumber": 7,
+    "consensusTimestamp": "1756540000.000000000",
+    "raw": "",
+    "envelope": {
+      "v": 1,
+      "type": "MANDATE",
+      "vault": "0x3be7042D043924CC4114859a66b6a3Fc43b69047",
+      "ts": 1756540000,
+      "body": {
+        "action": "AMENDED",
+        "mandateHash": "0x5b2aa6b40d6994afed27c26457c470d6fe4fa9c47622cbe388e20e1b29b19c75",
+        "yaml": "version: 1\nname: Fund One\nvault: \"0x00000000000000000000000000000000000000b0\"\nquote: \"0x00000000000000000000000000000000000000c0\"\ncovenants:\n  maxPositionBps: 3000\n  minCashBps: 1000\n  maxTradeNotional: \"250000000000\"\n  maxDailyNotional: \"1000000000000\"\nuniverse:\n  - \"0x00000000000000000000000000000000000000d0\"\n  - \"0x00000000000000000000000000000000000000d1\"\npriceFeeds:\n  \"0x00000000000000000000000000000000000000d0\": \"0x00000000000000000000000000000000000000e0\"\n  \"0x00000000000000000000000000000000000000d1\": \"0x00000000000000000000000000000000000000e1\"\n",
+        "covenants": {
+          "maxPositionBps": 3000,
+          "minCashBps": 1000,
+          "maxTradeNotional": "250000000000",
+          "maxDailyNotional": "1000000000000"
+        },
+        "prevMandateHash": "0x0f69f6da43d01681dfdd3d78c0196324f7914a6dd245c03de939c6653475e9ff"
+      }
+    }
+  }
+]

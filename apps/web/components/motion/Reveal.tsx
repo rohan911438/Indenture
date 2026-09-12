@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ElementType, type ReactNode } from "react";
-import { gsap, SplitText, useGSAP, registerPaperGsap } from "./gsapPaper";
+import { gsap, SplitText, useGSAP, registerPaperGsap, prefersReducedMotion } from "./gsapPaper";
 import { D, E, STAGGER } from "@/lib/motion";
 
 /**
@@ -42,7 +42,29 @@ export function Reveal({
       if (!el) return;
       registerPaperGsap();
 
-      const split = new SplitText(el, { type: "lines", linesClass: "line" });
+      /**
+       * Under reduced motion nothing is built at all.
+       *
+       * `gsap.from` sets its start values the moment it is created, so a
+       * scroll-triggered reveal hides its target immediately and only restores
+       * it when the trigger fires. That is the intended masking behaviour with
+       * motion on, and content that is simply invisible with motion off — so
+       * the tween must not exist rather than merely run fast.
+       */
+      if (prefersReducedMotion()) return;
+
+
+      /**
+       * `aria: "none"` because SplitText otherwise writes an aria-label onto
+       * the element and hides the pieces — prohibited on a plain div, and
+       * unnecessary here: a line split leaves the text in document order and
+       * fully readable.
+       */
+      const split = new SplitText(el, {
+        type: "lines",
+        linesClass: "line",
+        aria: "none",
+      });
 
       // SplitText gives us the lines; the mask is a wrapper we add around each,
       // because overflow on the line itself would clip the very thing moving.

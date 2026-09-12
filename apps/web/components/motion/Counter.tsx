@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { gsap, useGSAP, registerPaperGsap } from "./gsapPaper";
+import { gsap, useGSAP, registerPaperGsap, prefersReducedMotion } from "./gsapPaper";
 import { D, E } from "@/lib/motion";
 
 /**
@@ -47,6 +47,14 @@ export function Counter({
       const el = ref.current;
       if (!el) return;
       registerPaperGsap();
+
+      /**
+       * Behind the seal gate the page renders inert and blurred. A counter that
+       * runs there spends its whole animation unreadable and leaves a 0 on
+       * screen under the blur, which reads as the fund having refused nothing.
+       * Inert content keeps the server-rendered figure instead.
+       */
+      if (el.closest("[inert]") || prefersReducedMotion()) return;
 
       const counter = { n: 0 };
       const tween = gsap.to(counter, {
