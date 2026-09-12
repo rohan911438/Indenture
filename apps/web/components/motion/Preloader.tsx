@@ -123,7 +123,7 @@ export function Preloader() {
     >
       <div className="flex flex-col items-center gap-10">
         <Logo variant="stacked" size={64} state="drawing" />
-        <span className="t-data-sm" style={{ color: "var(--ink-3)" }} data-count>
+        <span className="t-data-sm" style={{ color: "var(--on-dark-2)" }} data-count>
           000
         </span>
       </div>
