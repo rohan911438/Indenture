@@ -88,7 +88,11 @@ export default async function LandingPage() {
 
       <main id="main">
         <TickerBar figures={figures} />
-        <Hero facts={facts} banner={banner ? `/${banner}` : null} />
+        <Hero
+          facts={facts}
+          banner={banner ? `/${banner}` : null}
+          builtOn={["Hedera", "Uniswap v4", "Chainlink"]}
+        />
         <Incident />
         <Terminal />
         <Refusals />

@@ -593,113 +593,186 @@
 /* --- hero --------------------------------------------------------------- */
 
 /**
- * The kimia arrangement: a headline block, then a full-bleed banner, then the
- * facts that back the claim. The banner is the load-bearing element — without
- * it the band was a headline in the top-left corner of 88vh of nothing, which
- * is what 8 of 12 columns buys you when the headline is only four words wide.
+ * One composition, not a stack of parts.
+ *
+ * The previous arrangement put a four-word headline at 104px in the top-left
+ * eighth of a viewport-tall black rectangle and left the rest empty. Type that
+ * small in a space that large reads as a placeholder no matter what is beside
+ * it, so the headline now runs the full width of the page and the band is
+ * built around it: the image is the ground rather than a strip underneath,
+ * the content sits low the way a poster does, and the facts close it off.
  */
 .hero {
   position: relative;
-  min-height: 100vh;
+  /* The ticker sits above this band, so a full 100svh puts the bottom of the
+     hero — and with it the fact rail — 48px below the fold on every screen
+     size. The band is the rest of the first screen, not all of it. */
+  min-height: calc(100svh - 48px);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: clamp(48px, 6vh, 88px);
-  overflow: hidden;
-  /* The rail is the last thing in the band, and it was sitting on the seam
-     with the paper. */
-  padding-block: 132px 36px;
-}
-.hero__grid {
-  display: grid;
-  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
-  gap: 24px;
-  align-items: end;
-  width: 100%;
-  position: relative;
-  z-index: 1;
+  justify-content: flex-end;
+  padding-block: 140px 40px;
+  isolation: isolate;
+  /* Deliberately NOT overflow:hidden. The band is allowed to grow past the
+     viewport on a short screen, and clipping it here cut the fact rail in
+     half. The drifting ground is contained by .hero__bg, which is absolutely
+     positioned and does its own clipping. */
 }
 
-/* --- the banner --------------------------------------------------------- */
+/* --- the ground --------------------------------------------------------- */
 
-/* Edge to edge, outside .shell — the one element on the page that is allowed
-   to touch both sides of the viewport. */
-.hero__banner {
-  position: relative;
-  width: 100%;
-  height: clamp(220px, 34vh, 420px);
-  background: var(--obsidian-2);
-  border-top: 1px solid var(--rule-dark);
-  border-bottom: 1px solid var(--rule-dark);
+.hero__bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   overflow: hidden;
 }
-.hero__banner img {
+.hero__bg img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
-/* A wash toward the band's own black at both ends, so the banner reads as part
-   of the hero rather than as a picture someone dropped into it. */
-.hero__banner::after {
+/**
+ * The scrim. Type sits on this, so it is not decoration — it is what keeps the
+ * headline at contrast over whatever photograph lands here. Heavier at the
+ * bottom-left, where the words are, and heaviest of all at the very bottom so
+ * the rail stays legible.
+ */
+.hero__bg::after {
   content: "";
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    var(--obsidian) 0%,
-    rgba(6, 6, 6, 0) 22%,
-    rgba(6, 6, 6, 0) 78%,
-    var(--obsidian) 100%
-  );
+  background:
+    linear-gradient(
+      to top,
+      var(--obsidian) 0%,
+      rgba(6, 6, 6, 0.92) 26%,
+      rgba(6, 6, 6, 0.55) 58%,
+      rgba(6, 6, 6, 0.35) 100%
+    ),
+    linear-gradient(
+      to right,
+      rgba(6, 6, 6, 0.8) 0%,
+      rgba(6, 6, 6, 0.3) 45%,
+      rgba(6, 6, 6, 0) 75%
+    );
 }
-/* Until the photograph lands: the mark, very large and very quiet, on the
-   band's own ground. Deliberate rather than empty. */
-.hero__banner[data-placeholder="true"] {
+/* Without a photograph the ground is the mark, very large and very quiet — a
+   deliberate surface rather than an empty one. */
+.hero__bg[data-placeholder="true"] {
   display: grid;
   place-items: center;
+  background: radial-gradient(
+    120% 90% at 72% 35%,
+    var(--obsidian-2) 0%,
+    var(--obsidian) 68%
+  );
 }
-.hero__banner[data-placeholder="true"] .mark {
-  opacity: 0.2;
+.hero__bg[data-placeholder="true"] .mark {
+  opacity: 0.16;
 }
 
-/* --- built on ----------------------------------------------------------- */
+/* --- the type ----------------------------------------------------------- */
 
-.hero__built {
+/* Full width, two lines, and deliberately larger than the display scale: this
+   is the one place on the site where the type is the layout. */
+.hero__headline {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(52px, 8.8vw, 150px);
+  line-height: 0.94;
+  letter-spacing: -0.04em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.hero__lower {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 24px 48px;
+  align-items: end;
+  width: 100%;
+}
+.hero__aside {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-bottom: 8px;
+  gap: 28px;
+  padding-bottom: 10px;
 }
-/* The eyebrow in this column is a <p> too, and a bare `.hero__built p` was
-   outranking .t-eyebrow at equal specificity and setting it 26px. */
-.hero__built p:not(.t-eyebrow) {
-  font-size: clamp(20px, 1.5vw, 26px);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  color: var(--on-dark-2);
+
+/* --- the rail ----------------------------------------------------------- */
+
+.hero__foot {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  border-top: 1px solid var(--rule-dark);
+  padding-top: 24px;
+  margin-top: clamp(32px, 4vh, 56px);
+}
+.hero__rail {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 56px;
+}
+.hero__fact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.hero__fact dt {
+  color: var(--on-dark-2);
+}
+.hero__fact dd {
+  margin: 0;
+  color: var(--on-dark);
+  overflow-wrap: anywhere;
+}
+/* The one thing on the rail that is an instruction rather than a fact. */
+.hero__scroll {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--on-dark-2);
+}
+.hero__scroll span[aria-hidden] {
+  display: inline-block;
+  animation: hero-nudge 2.4s ease-in-out infinite;
+}
+@keyframes hero-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
 }
 
 @media (max-width: 1023px) {
   .hero {
-    padding-block: 108px 28px;
-    min-height: auto;
+    padding-block: 124px 28px;
   }
-  .hero__grid {
+  .hero__lower {
     grid-template-columns: 1fr;
-    gap: 56px;
+    gap: 40px;
     align-items: start;
   }
-  .hero__built {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 12px 28px;
+  .hero__aside {
     padding-bottom: 0;
   }
-  .hero__banner {
-    height: clamp(180px, 26vh, 260px);
+  .hero__foot {
+    gap: 20px 32px;
+    flex-wrap: wrap;
+  }
+  .hero__scroll {
+    display: none;
   }
 }
 
@@ -948,82 +1021,6 @@
 }
 html[data-preload="1"] .preloader {
   display: grid;
-}
-
-/* --- hero rail ---------------------------------------------------------- */
-
-/**
- * The band is 88vh, and the argument only needs the top of it. Rather than
- * leave the lower half empty, the hero closes on a rail of instrument facts —
- * the nordstern move: infrastructure earns trust with hard numbers, and these
- * are the real ones out of deployments.json.
- */
-.hero {
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 96px;
-}
-/* The rule and the row live on the wrapper, so the facts can be a real <dl>
-   and the scroll cue — which is an instruction, not a fact — can sit beside it
-   without being a child of the list. */
-.hero__foot {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: flex-start;
-  gap: 32px;
-  border-top: 1px solid var(--rule-dark);
-  padding-top: 24px;
-}
-.hero__rail {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 64px;
-}
-.hero__fact {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.hero__fact dt {
-  color: var(--on-dark-2);
-}
-.hero__fact dd {
-  margin: 0;
-  color: var(--on-dark);
-  overflow-wrap: anywhere;
-}
-/* Pushed to the far end of the rail: the one thing on it that is an
-   instruction rather than a fact. */
-.hero__scroll {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--on-dark-2);
-}
-.hero__scroll span[aria-hidden] {
-  display: inline-block;
-  animation: hero-nudge 2.4s ease-in-out infinite;
-}
-@keyframes hero-nudge {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(3px); }
-}
-@media (max-width: 767px) {
-  .hero {
-    gap: 56px;
-  }
-  .hero__rail {
-    gap: 20px 32px;
-  }
-  .hero__scroll {
-    display: none;
-  }
 }
 
 /* --- the seal gate ------------------------------------------------------ */
