@@ -52,3 +52,6 @@ docs/
 # working notes for the repo owner - local only
 memory.md
 report.md
+
+# Build output from an out-of-band QA build (see apps/web/next.config.mjs)
+.next-qa/
