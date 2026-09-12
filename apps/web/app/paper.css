@@ -486,38 +486,11 @@
   }
 }
 
-/* --- ticker ------------------------------------------------------------- */
-
-.ticker {
-  height: 48px;
-  background: var(--obsidian);
-  /* Carries .on-obsidian in the markup so its one green figure resolves against
-     the right ground; this stays for anything that renders it bare. */
-  color: var(--on-dark);
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-}
-.ticker__track {
-  display: flex;
-  flex: none;
-  white-space: nowrap;
-  will-change: transform;
-}
-.ticker__run {
-  display: flex;
-  flex: none;
-  align-items: center;
-}
-.ticker__item {
-  padding-inline: 20px;
-}
-
 /* --- nav ---------------------------------------------------------------- */
 
 .nav {
   position: absolute;
-  top: 48px; /* clears the ticker, and scrolls away with it */
+  top: 0;
   left: 0;
   right: 0;
   z-index: 60;
@@ -604,14 +577,12 @@
  */
 .hero {
   position: relative;
-  /* The ticker sits above this band, so a full 100svh puts the bottom of the
-     hero — and with it the fact rail — 48px below the fold on every screen
-     size. The band is the rest of the first screen, not all of it. */
-  min-height: calc(100svh - 48px);
+  /* The whole first screen. Nothing sits above it any more. */
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding-block: 140px 40px;
+  padding-block: 132px 96px;
   isolation: isolate;
   /* Deliberately NOT overflow:hidden. The band is allowed to grow past the
      viewport on a short screen, and clipping it here cut the fact rail in
@@ -701,41 +672,15 @@
   padding-bottom: 10px;
 }
 
-/* --- the rail ----------------------------------------------------------- */
+/* --- the scroll cue ----------------------------------------------------- */
 
-.hero__foot {
-  display: flex;
-  align-items: flex-start;
-  gap: 32px;
-  border-top: 1px solid var(--rule-dark);
-  padding-top: 24px;
-  margin-top: clamp(32px, 4vh, 56px);
-}
-.hero__rail {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 56px;
-}
-.hero__fact {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.hero__fact dt {
-  color: var(--on-dark-2);
-}
-.hero__fact dd {
-  margin: 0;
-  color: var(--on-dark);
-  overflow-wrap: anywhere;
-}
-/* The one thing on the rail that is an instruction rather than a fact. */
+/* All that survives of the fact rail: one instruction, in the corner, out of
+   the headline's way. */
 .hero__scroll {
-  flex: none;
+  position: absolute;
+  right: var(--gutter);
+  bottom: 36px;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -757,7 +702,7 @@
 
 @media (max-width: 1023px) {
   .hero {
-    padding-block: 124px 28px;
+    padding-block: 112px 80px;
   }
   .hero__lower {
     grid-template-columns: 1fr;
@@ -766,10 +711,6 @@
   }
   .hero__aside {
     padding-bottom: 0;
-  }
-  .hero__foot {
-    gap: 20px 32px;
-    flex-wrap: wrap;
   }
   .hero__scroll {
     display: none;

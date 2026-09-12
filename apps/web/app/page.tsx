@@ -2,7 +2,6 @@ import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { Cursor } from "@/components/motion/Cursor";
 import { Preloader, PreloaderFlag } from "@/components/motion/Preloader";
 import { PaperNav } from "@/components/paper/PaperNav";
-import { TickerBar } from "@/components/paper/TickerBar";
 import { Hero } from "@/components/paper/Hero";
 import { Incident } from "@/components/paper/Incident";
 import { Terminal } from "@/components/paper/Terminal";
@@ -10,8 +9,6 @@ import { Refusals } from "@/components/paper/Refusals";
 import { Mechanism } from "@/components/paper/Mechanism";
 import { Stack } from "@/components/paper/Stack";
 import { PaperFooter } from "@/components/paper/PaperFooter";
-import { deployments } from "@/lib/deployments";
-import { getBlocked, getMandate } from "@/lib/data";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -22,38 +19,19 @@ import { join } from "node:path";
  * a white editorial document. The transition between them is a hard edge in
  * both directions; the band simply ends.
  *
- * Nothing here reads the chain. Every figure is seeded, so the page renders in
- * full with no wallet, no RPC and no relay, and a judge with a dead network
- * still sees the whole argument. The live reads arrive behind one adapter in a
- * later phase and change none of this markup.
+ * The hero is the whole first screen and carries nothing but the claim. The
+ * ticker and the fact rail that used to bracket it are gone: both were strips
+ * of small type competing with a headline that is supposed to be the only
+ * thing on that screen. The deployment addresses and topic ids they carried
+ * are still on the page, in the stack section, where someone looking for them
+ * will actually go.
+ *
+ * Nothing here reads the chain, so the page is fully static and renders with
+ * no wallet, no RPC and no relay.
  */
-/* The journal is read at request time and falls back to fixtures, so the page
-   renders in full with no network. Five seconds is the same window the rest of
-   the site uses. */
-export const revalidate = 5;
-
-export default async function LandingPage() {
+export default function LandingPage() {
   /**
-   * Read once, on the server, straight out of deployments.json. These are the
-   * real addresses and topics the fund is deployed at, not a sample — the rail
-   * is only worth having if a judge can paste any of it into HashScan.
-   */
-  const [blocked, mandate] = await Promise.all([getBlocked(), getMandate()]);
-
-  /* Counted, never typed. A hardcoded figure here is a figure that will be
-     wrong the first time the fixture changes. */
-  const figures = [
-    { text: "INDENTURE" },
-    { text: `REFUSED ${blocked.data.length}` },
-    { text: "LOST $0.00", tone: "permit" as const },
-    { text: `MANDATE #${mandate.data.seq}` },
-    {
-      text: `${(deployments.network?.name ?? "no network").toUpperCase()} ${deployments.network?.chainId ?? ""}`.trim(),
-    },
-  ];
-
-  /**
-   * The hero banner, if one has been dropped in.
+   * The hero ground, if one has been dropped in.
    *
    * Checked on disk rather than assumed, so a missing file is a designed
    * placeholder rather than a broken image — and so the photograph can be
@@ -64,16 +42,6 @@ export default async function LandingPage() {
     ["hero.avif", "hero.webp", "hero.jpg", "hero.jpeg", "hero.png"]
       .map((name) => ({ name, path: join(process.cwd(), "public", name) }))
       .find((f) => existsSync(f.path))?.name ?? null;
-
-  const facts = [
-    {
-      label: "Network",
-      value: `${deployments.network?.name ?? "not deployed"} · ${deployments.network?.chainId ?? "—"}`,
-    },
-    { label: "Hook", value: deployments.contracts?.PolicyHook || "not deployed" },
-    { label: "Mandate topic", value: deployments.hcs?.mandateTopicId || "unset" },
-    { label: "Journal topic", value: deployments.hcs?.journalTopicId || "unset" },
-  ];
 
   return (
     <div className="paper-root">
@@ -87,12 +55,7 @@ export default async function LandingPage() {
       <PaperNav />
 
       <main id="main">
-        <TickerBar figures={figures} />
-        <Hero
-          facts={facts}
-          banner={banner ? `/${banner}` : null}
-          builtOn={["Hedera", "Uniswap v4", "Chainlink"]}
-        />
+        <Hero banner={banner ? `/${banner}` : null} />
         <Incident />
         <Terminal />
         <Refusals />

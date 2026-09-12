@@ -9,33 +9,27 @@ import { Mark } from "@/components/brand/Mark";
 import { Eyebrow } from "./Primitives";
 import { HeroActions } from "./HeroActions";
 
-export type HeroFact = { label: string; value: string };
-
 /**
  * The hero.
  *
- * One composition rather than a stack of parts. The image is the ground the
- * band is built on, the headline runs the full width of the page, and the
- * content sits low — the arrangement a poster uses, and the one kimia uses:
- * the picture carries the space and the type carries the claim.
+ * One composition. The image is the ground the band is built on, the headline
+ * runs the full width of the page, and the content sits low — the arrangement
+ * a poster uses: the picture carries the space and the type carries the claim.
  *
- * What this replaces was a four-word headline at 104px in the top-left eighth
- * of a viewport-tall black rectangle. Type that small in a space that large
- * reads as a placeholder no matter what is put beside it, so the fix was not
- * another column of content — it was to let the words be the layout.
+ * It holds nothing else. A marquee ran above it and a rail of addresses below
+ * it, and both were strips of 11px type bracketing a headline that is supposed
+ * to be the only thing on the screen. What they carried has a better home: the
+ * refusal count is the header of /blocked, and the contract and topic ids are
+ * in the stack section as links someone can actually follow.
  *
  * Near-black, Medium weight, and exactly one saturated colour, on the one word
  * that earns it.
  */
 export function Hero({
-  facts,
   banner,
-  builtOn,
 }: {
-  facts: HeroFact[];
   /** the ground photograph, or null until one is dropped into public/ */
   banner: string | null;
-  builtOn: string[];
 }) {
   const root = useRef<HTMLElement>(null);
 
@@ -83,7 +77,11 @@ export function Hero({
 
   return (
     <section ref={root} className="hero on-obsidian" aria-labelledby="hero-head">
-      <div className="hero__bg" data-placeholder={banner ? undefined : "true"} aria-hidden="true">
+      <div
+        className="hero__bg"
+        data-placeholder={banner ? undefined : "true"}
+        aria-hidden="true"
+      >
         {banner ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={banner} alt="" fetchPriority="high" />
@@ -129,30 +127,11 @@ export function Hero({
             </div>
           </Rise>
         </div>
+      </div>
 
-        <div className="hero__foot">
-          <Rise as="dl" className="hero__rail" start="top 99%" stagger={0.05}>
-            {facts.map((f) => (
-              <div key={f.label} className="hero__fact">
-                <dt className="t-eyebrow">{f.label}</dt>
-                <dd className="t-data">{f.value}</dd>
-              </div>
-            ))}
-            <div className="hero__fact">
-              {/* Demoted from a column of 28px names to one more fact on the
-                  rail. It is provenance, not a headline. */}
-              <dt className="t-eyebrow">Built on</dt>
-              <dd className="t-data">{builtOn.join(" · ")}</dd>
-            </div>
-          </Rise>
-
-          {/* Outside the list: a dl may only hold dt/dd groups, and this is an
-              instruction rather than a fact about the deployment. */}
-          <div className="hero__scroll t-data-sm">
-            <span>SCROLL</span>
-            <span aria-hidden="true">↓</span>
-          </div>
-        </div>
+      <div className="hero__scroll t-data-sm">
+        <span>SCROLL</span>
+        <span aria-hidden="true">↓</span>
       </div>
     </section>
   );
