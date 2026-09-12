@@ -9,8 +9,64 @@ import { Refusals } from "@/components/paper/Refusals";
 import { Mechanism } from "@/components/paper/Mechanism";
 import { Stack } from "@/components/paper/Stack";
 import { PaperFooter } from "@/components/paper/PaperFooter";
-import { existsSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
+
+/**
+ * hero.png, hero-800.avif — the width group is optional.
+ *
+ * A literal, not a string built per format: in a template literal `\d` is not
+ * an escape at all and collapses to a plain "d", so the assembled pattern
+ * silently matched nothing.
+ */
+const HERO = /^hero(?:-(\d+))?\.([a-z0-9]+)$/;
+
+/** Best format first; the browser takes the first one it can decode. */
+const FORMATS = [
+  ["avif", "image/avif"],
+  ["webp", "image/webp"],
+  ["jpg", "image/jpeg"],
+  ["jpeg", "image/jpeg"],
+  ["png", "image/png"],
+] as const;
+
+/**
+ * The hero ground, read off disk rather than assumed.
+ *
+ * public/ is scanned for hero.<ext> and hero-<width>.<ext>, so the photograph
+ * is added by copying files in and needs no code change, and a missing one is
+ * a designed placeholder rather than a broken image.
+ *
+ * Widths matter here more than anywhere else on the site. The picture arrived
+ * as a 1.7MB PNG and is the largest thing on the first screen; at 800px wide
+ * it is a 19KB AVIF, and a phone has no use for the 2200px plate. Each format
+ * becomes one <source> with a full srcset, and the browser picks twice — once
+ * on what it can decode, once on how wide it actually is.
+ */
+function readGround() {
+  const files = readdirSync(join(process.cwd(), "public"));
+
+  const sources = FORMATS.map(([ext, type]) => {
+    const candidates = files
+      .map((f) => ({ f, m: HERO.exec(f) }))
+      .filter((c) => c.m?.[2] === ext)
+      .map((c) => ({ file: c.f, width: c.m![1] ? Number(c.m![1]) : 0 }))
+      .sort((a, b) => a.width - b.width);
+    if (candidates.length === 0) return null;
+    return {
+      type,
+      // A width-less hero.<ext> carries no descriptor, which is exactly right:
+      // it is then the only candidate and the browser uses it unconditionally.
+      srcSet: candidates
+        .map((c) => (c.width ? `/${c.file} ${c.width}w` : `/${c.file}`))
+        .join(", "),
+      widest: `/${candidates[candidates.length - 1].file}`,
+    };
+  }).filter((s) => s !== null);
+
+  if (sources.length === 0) return null;
+  return { sources, fallback: sources[sources.length - 1].widest };
+}
 
 /**
  * The landing page.
@@ -30,18 +86,7 @@ import { join } from "node:path";
  * no wallet, no RPC and no relay.
  */
 export default function LandingPage() {
-  /**
-   * The hero ground, if one has been dropped in.
-   *
-   * Checked on disk rather than assumed, so a missing file is a designed
-   * placeholder rather than a broken image — and so the photograph can be
-   * added by copying it into public/ with no code change at all. First match
-   * wins, best format first.
-   */
-  const banner =
-    ["hero.avif", "hero.webp", "hero.jpg", "hero.jpeg", "hero.png"]
-      .map((name) => ({ name, path: join(process.cwd(), "public", name) }))
-      .find((f) => existsSync(f.path))?.name ?? null;
+  const ground = readGround();
 
   return (
     <div className="paper-root">
@@ -55,7 +100,7 @@ export default function LandingPage() {
       <PaperNav />
 
       <main id="main">
-        <Hero banner={banner ? `/${banner}` : null} />
+        <Hero ground={ground} />
         <Incident />
         <Terminal />
         <Refusals />

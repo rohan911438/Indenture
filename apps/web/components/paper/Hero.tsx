@@ -25,11 +25,18 @@ import { HeroActions } from "./HeroActions";
  * Near-black, Medium weight, and exactly one saturated colour, on the one word
  * that earns it.
  */
+export type Ground = {
+  /** One entry per format, best first. */
+  sources: { type: string; srcSet: string; widest: string }[];
+  /** What a browser that understood none of the <source> types gets. */
+  fallback: string;
+};
+
 export function Hero({
-  banner,
+  ground,
 }: {
-  /** the ground photograph, or null until one is dropped into public/ */
-  banner: string | null;
+  /** The ground photograph, or null until one is dropped into public/. */
+  ground: Ground | null;
 }) {
   const root = useRef<HTMLElement>(null);
 
@@ -59,10 +66,10 @@ export function Hero({
       if (!img) return;
       const drift = gsap.fromTo(
         img,
-        { scale: 1.12, yPercent: -3 },
+        { scale: 1.06, yPercent: -2 },
         {
           scale: 1,
-          yPercent: 3,
+          yPercent: 2,
           ease: "none",
           scrollTrigger: { trigger: el, start: "top top", end: "bottom top", scrub: 1 },
         },
@@ -79,12 +86,22 @@ export function Hero({
     <section ref={root} className="hero on-obsidian" aria-labelledby="hero-head">
       <div
         className="hero__bg"
-        data-placeholder={banner ? undefined : "true"}
+        data-placeholder={ground ? undefined : "true"}
         aria-hidden="true"
       >
-        {banner ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={banner} alt="" fetchPriority="high" />
+        {ground ? (
+          <picture>
+            {ground.sources.map((s) => (
+              <source key={s.type} type={s.type} srcSet={s.srcSet} sizes="100vw" />
+            ))}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={ground.fallback}
+              alt=""
+              fetchPriority="high"
+              decoding="async"
+            />
+          </picture>
         ) : (
           <Mark size={420} />
         )}

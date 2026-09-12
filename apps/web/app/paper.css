@@ -598,17 +598,81 @@
   z-index: -1;
   overflow: hidden;
 }
+.hero__bg picture,
 .hero__bg img {
+  display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  display: block;
 }
+.hero__bg img {
+  object-fit: cover;
+  /* The instrument sits high and right in the artwork; this keeps it there at
+     every aspect ratio instead of letting `cover` centre it into the type. */
+  object-position: 72% 30%;
+  filter: brightness(0.95) contrast(1.06) saturate(1.06);
+}
+
+/**
+ * The mask.
+ *
+ * The photograph is a bright object on a white field and the band is black, so
+ * the usual move — lay the picture down and darken it with a scrim — gives a
+ * grey haze across the whole screen and a headline sitting in it. Instead the
+ * white is the light: the picture is cut to an ellipse around the instrument
+ * and dissolved to nothing everywhere else, so it reads as something lit in a
+ * dark room rather than a photograph with a filter over it.
+ *
+ * Three layers, intersected, each one protecting a place type lives:
+ *   the ellipse   — holds the instrument and lets it fall off into the black
+ *   from the foot — clears the bottom third, where the headline runs
+ *   from the left — clears the left half, where the headline starts
+ *
+ * It is cut on the <picture>, not on .hero__bg: a mask applies to everything
+ * an element paints, and the scrim below is a child, so masking the wrapper
+ * would cut the scrim away with the photograph. The <picture> also holds still
+ * while the <img> drifts inside it, which is what makes the drift read as the
+ * ground moving behind a frame rather than the frame moving too.
+ */
+.hero__bg picture {
+  --hero-cut:
+    radial-gradient(
+      82% 74% at 74% 30%,
+      #000 0%,
+      #000 30%,
+      rgba(0, 0, 0, 0.62) 58%,
+      rgba(0, 0, 0, 0.18) 80%,
+      transparent 92%
+    ),
+    linear-gradient(
+      to top,
+      transparent 0%,
+      rgba(0, 0, 0, 0.16) 30%,
+      rgba(0, 0, 0, 0.7) 52%,
+      #000 70%
+    ),
+    linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(0, 0, 0, 0.22) 24%,
+      rgba(0, 0, 0, 0.72) 44%,
+      #000 62%
+    );
+  -webkit-mask-image: var(--hero-cut);
+  mask-image: var(--hero-cut);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
 /**
  * The scrim. Type sits on this, so it is not decoration — it is what keeps the
- * headline at contrast over whatever photograph lands here. Heavier at the
- * bottom-left, where the words are, and heaviest of all at the very bottom so
- * the rail stays legible.
+ * headline at contrast. The mask above already clears most of the light out of
+ * the bottom-left; this is the guarantee, not the mechanism, so it is far
+ * lighter than it was when it had to do the whole job alone.
+ *
+ * The first layer is the one that is not about the headline: the nav is
+ * transparent over this band and its links were landing on the brightest part
+ * of the picture, unreadable. Dropping the top 200px into shadow puts them
+ * back on near-black without cutting the instrument off at the top edge.
  */
 .hero__bg::after {
   content: "";
@@ -616,17 +680,24 @@
   inset: 0;
   background:
     linear-gradient(
+      to bottom,
+      rgba(6, 6, 6, 0.97) 0%,
+      rgba(6, 6, 6, 0.93) 6%,
+      rgba(6, 6, 6, 0.45) 13%,
+      rgba(6, 6, 6, 0) 22%
+    ),
+    linear-gradient(
       to top,
       var(--obsidian) 0%,
-      rgba(6, 6, 6, 0.92) 26%,
-      rgba(6, 6, 6, 0.55) 58%,
-      rgba(6, 6, 6, 0.35) 100%
+      rgba(6, 6, 6, 0.78) 22%,
+      rgba(6, 6, 6, 0.24) 52%,
+      rgba(6, 6, 6, 0) 78%
     ),
     linear-gradient(
       to right,
-      rgba(6, 6, 6, 0.8) 0%,
-      rgba(6, 6, 6, 0.3) 45%,
-      rgba(6, 6, 6, 0) 75%
+      rgba(6, 6, 6, 0.72) 0%,
+      rgba(6, 6, 6, 0.22) 42%,
+      rgba(6, 6, 6, 0) 68%
     );
 }
 /* Without a photograph the ground is the mark, very large and very quiet — a
@@ -714,6 +785,66 @@
   }
   .hero__scroll {
     display: none;
+  }
+
+  /**
+   * The ground, narrow.
+   *
+   * The picture is 1.8:1 and a phone is 0.46:1, so covering the whole band
+   * throws away three quarters of the width and leaves one magnified sphere
+   * with none of the mechanism around it — the part that is worth looking at.
+   * Above, the type stacks into a single column and the picture has no
+   * competition on the left any more, so the band splits instead: the
+   * instrument takes the top, the words take the bottom, and the ellipse is
+   * recentred on the shorter frame.
+   */
+  .hero__bg {
+    bottom: auto;
+    /* Stops above the eyebrow. Measured, not guessed: at 62% the eyebrow's
+       line sat inside the picture's falloff at 3.16:1. */
+    height: 54%;
+  }
+  .hero__bg img {
+    object-position: 58% 32%;
+  }
+  .hero__bg picture {
+    --hero-cut:
+      radial-gradient(
+        92% 72% at 60% 34%,
+        #000 0%,
+        #000 38%,
+        rgba(0, 0, 0, 0.55) 68%,
+        transparent 92%
+      ),
+      linear-gradient(
+        to top,
+        transparent 0%,
+        rgba(0, 0, 0, 0.22) 14%,
+        rgba(0, 0, 0, 0.8) 30%,
+        #000 44%
+      ),
+      linear-gradient(
+        to right,
+        rgba(0, 0, 0, 0.45) 0%,
+        rgba(0, 0, 0, 0.88) 20%,
+        #000 36%
+      );
+  }
+  .hero__bg::after {
+    background:
+      linear-gradient(
+        to bottom,
+        rgba(6, 6, 6, 0.97) 0%,
+        rgba(6, 6, 6, 0.94) 9%,
+        rgba(6, 6, 6, 0.42) 19%,
+        rgba(6, 6, 6, 0) 33%
+      ),
+      linear-gradient(
+        to top,
+        var(--obsidian) 0%,
+        rgba(6, 6, 6, 0.55) 20%,
+        rgba(6, 6, 6, 0) 46%
+      );
   }
 }
 
