@@ -1,0 +1,902 @@
+/**
+ * The paper system — FRONTEND.md §4.
+ *
+ * Every token here is scoped to .paper-root rather than :root. The site still
+ * carries an older ink/bone/brass system on /mandate, /journal, /blocked and
+ * /shares, and that system owns --ink at a different value. Scoping lets both
+ * exist until the later phases convert those routes, and means nothing on this
+ * stylesheet can reach a page that has not opted in.
+ *
+ * Measured values, not estimates: the body is pure white, the text is a warm
+ * brown-black, section rules are a step lighter than component borders, and the
+ * display weight is Medium. Those four decisions are most of the look.
+ */
+
+.paper-root {
+  /* --- paper: the body ------------------------------------------------- */
+  --paper: #ffffff;
+  --paper-2: #fafaf9; /* recessed panel only */
+  --ink: #292521; /* THE colour. warm brown-black, never #000 */
+  --ink-2: #6b645c;
+  --ink-3: #9a938b; /* eyebrows, timestamps, disabled */
+  --rule: #ededed; /* full-bleed section rules */
+  --border: #d9d6d2; /* component borders, table lines */
+
+  /* --- obsidian: hero, ticker, footer ---------------------------------- */
+  --obsidian: #060606;
+  --obsidian-2: #141310;
+  --on-dark: #f4f2ef;
+  --on-dark-2: #8c867e;
+  --rule-dark: #262320;
+
+  /* --- meaning. The only saturated colours on the site. ----------------- */
+  --permit: #1d6b57;
+  --permit-bg: #edf5f1;
+  --refuse: #a3222e;
+  --refuse-bg: #fbedee;
+  --watch: #8a5b08;
+  --watch-bg: #fbf3e4;
+
+  /* The one shadow that exists in the entire system. */
+  --lift: 0 1px 2px rgba(41, 37, 33, 0.04);
+
+  --gutter: clamp(20px, 3.8vw, 72px);
+  --maxw: 1800px;
+
+  /* Satoshi is fetched from Fontshare; Plus Jakarta Sans is bundled and takes
+     over unchanged if that request never lands. Never Inter. */
+  --sans: "Satoshi", var(--font-jakarta), system-ui, sans-serif;
+  --serif: var(--font-newsreader), Newsreader, Georgia, serif;
+  --mono: var(--font-jbmono), "JetBrains Mono", ui-monospace, monospace;
+
+  position: relative;
+  color-scheme: light;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* An obsidian band re-points the neutrals at their dark equivalents, so a
+   component dropped into the hero or the footer needs no dark variant of its
+   own — it reads --ink and gets the right thing. */
+.on-obsidian {
+  --paper: var(--obsidian);
+  --paper-2: var(--obsidian-2);
+  --ink: var(--on-dark);
+  --ink-2: var(--on-dark-2);
+  --ink-3: var(--on-dark-2);
+  --rule: var(--rule-dark);
+  --border: var(--rule-dark);
+  /* --permit measures about 2.6:1 against obsidian, which is not enough for
+     the focus ring or for the one green figure in the ticker. The dark bands
+     get the lit value; the hue and the meaning are unchanged. */
+  --permit: #5fb89b;
+  background: var(--obsidian);
+  color: var(--on-dark);
+  color-scheme: dark;
+}
+
+/* --- layout ------------------------------------------------------------ */
+
+.shell {
+  width: 100%;
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Rules span the viewport, not the column. This is the single most
+   recognisable detail of the layout and it is wrong the moment it is inset. */
+.bleed-rule {
+  width: 100%;
+  height: 1px;
+  background: var(--rule);
+  border: 0;
+  margin: 0;
+}
+
+.section {
+  padding-top: 96px;
+  padding-bottom: clamp(96px, 10vw, 160px);
+}
+
+/* --- type -------------------------------------------------------------- */
+
+.t-display-xl,
+.t-display-l,
+.t-display-m {
+  font-family: var(--sans);
+  font-weight: 500; /* Medium. A 700 display weight is the fastest tell of a template. */
+  text-wrap: balance;
+  margin: 0;
+}
+.t-display-xl {
+  font-size: clamp(40px, 5.6vw, 104px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.t-display-l {
+  font-size: clamp(34px, 4.9vw, 92px);
+  line-height: 1.12;
+  letter-spacing: -0.028em;
+}
+.t-display-m {
+  font-size: clamp(22px, 2.5vw, 46px);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+}
+
+.t-title {
+  font-family: var(--sans);
+  font-size: clamp(18px, 1.3vw, 22px);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+/* A legal instrument reads in a serif. Prose only — never a label. */
+.t-prose {
+  font-family: var(--serif);
+  font-size: clamp(17px, 1.15vw, 21px);
+  font-weight: 400;
+  line-height: 1.62;
+  max-width: 66ch;
+}
+
+.t-body {
+  font-size: 16px;
+  line-height: 1.55;
+}
+.t-small {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.t-eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.t-data,
+.t-data-sm,
+.t-numeral {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+.t-data {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.t-data-sm {
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+}
+.t-numeral {
+  font-size: clamp(36px, 4vw, 72px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* The section anatomy, in exact steps: rule → 96 → eyebrow → 48 → headline
+   → 104 → content.
+ *
+ * These sit AFTER the type scale deliberately. The display classes zero their
+ * own margins at the same specificity, so source order is what decides, and
+ * placed earlier these were silently doing nothing. */
+.section__eyebrow + * {
+  margin-top: 48px;
+}
+.section__head + * {
+  margin-top: 104px;
+}
+
+:where(.paper-root a) {
+  /* Zero specificity on purpose. A link inherits its colour by default, but
+     anything that gives itself one — .btn--primary above all — must win, and
+     a plain `.paper-root a` rule outranks a single class and does not. */
+  color: inherit;
+}
+
+.paper-root ::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Focus is not hover. This ring must survive every hover style on the site. */
+.paper-root :focus-visible {
+  outline: 2px solid var(--permit);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* --- the mark ----------------------------------------------------------- */
+
+/**
+ * The supplied artwork, used unaltered. It is already two halves, which is the
+ * whole idea behind the word: a contract written twice on one sheet and cut
+ * apart, proved genuine by the halves matching.
+ *
+ * So the two halves are not redrawn — the same image is painted twice and each
+ * copy is clipped to one side of the seam, measured at 55.1% of the artwork's
+ * width. Nothing is recoloured, stretched, or filled. The states move the
+ * halves; they never touch the artwork.
+ */
+.mark {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+}
+.mark__half {
+  position: absolute;
+  inset: 0;
+  background-image: url("/brand/mark.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  will-change: transform;
+}
+.mark__half--a {
+  clip-path: inset(0 44.9% 0 0);
+}
+.mark__half--b {
+  clip-path: inset(0 0 0 55.1%);
+}
+
+/* open — the halves come apart. Used when a wallet connects or a route
+   unlocks: the instrument has been opened. */
+.mark[data-state="open"] .mark__half--a {
+  transform: translateX(-14%) rotate(-3deg);
+}
+.mark[data-state="open"] .mark__half--b {
+  transform: translateX(14%) rotate(3deg);
+}
+
+/**
+ * refused — the halves no longer line up.
+ *
+ * The spec offsets them horizontally, but this artwork already carries a
+ * horizontal gap between its halves, so widening it would read as "open". The
+ * misalignment is therefore vertical, which is the same claim in the same
+ * number of pixels: the two pieces do not match, so the thing is not genuine,
+ * so it does not execute.
+ */
+.mark[data-state="refused"] .mark__half--a {
+  transform: translateY(-4%);
+}
+.mark[data-state="refused"] .mark__half--b {
+  transform: translateY(4%);
+}
+
+.mark[data-state],
+.mark[data-state] .mark__half {
+  transition: transform 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+
+/* drawing — the halves wipe on from the outside and MEET at the seam. The PNG
+   cannot stroke on, so the reveal is a clip instead.
+ *
+ * The inset that shrinks is the one on the seam side: the left half uncovers
+ * from its outer edge rightward and the right half leftward, so the two arrive
+ * together in the middle. Run the other way round they retreat from the seam,
+ * which reads as the instrument coming apart rather than being made. The
+ * preloader drives each variable down to its half's resting inset. */
+.mark[data-state="drawing"] .mark__half--a {
+  clip-path: inset(0 var(--wipe-a, 100%) 0 0);
+}
+.mark[data-state="drawing"] .mark__half--b {
+  clip-path: inset(0 0 0 var(--wipe-b, 100%));
+}
+
+.lockup-img {
+  display: block;
+  height: auto;
+}
+
+/* --- buttons ------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  padding-inline: 28px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 240ms cubic-bezier(0.16, 0.84, 0.28, 1),
+    border-color 240ms cubic-bezier(0.16, 0.84, 0.28, 1),
+    color 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.btn--primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+.btn--ghost {
+  border-color: var(--border);
+  color: var(--ink);
+  background: transparent;
+}
+.btn--ghost:hover {
+  border-color: var(--ink);
+  background: var(--paper-2);
+}
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- panel -------------------------------------------------------------- */
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.panel__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 44px;
+  padding-inline: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* --- chip --------------------------------------------------------------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding-inline: 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.chip::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.chip[data-status="permit"] {
+  color: var(--permit);
+  background: var(--permit-bg);
+  border-color: color-mix(in srgb, var(--permit) 18%, transparent);
+}
+.chip[data-status="refuse"] {
+  color: var(--refuse);
+  background: var(--refuse-bg);
+  border-color: color-mix(in srgb, var(--refuse) 18%, transparent);
+}
+.chip[data-status="watch"] {
+  color: var(--watch);
+  background: var(--watch-bg);
+  border-color: color-mix(in srgb, var(--watch) 18%, transparent);
+}
+.chip[data-status="neutral"] {
+  color: var(--ink-2);
+  background: var(--paper-2);
+  border-color: var(--border);
+}
+
+/* --- triptych ----------------------------------------------------------- */
+
+/* ONE container with internal dividers. Three cards with gaps is the single
+   most common way to lose this layout. */
+.triptych {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.triptych__cell {
+  padding: 48px 44px 64px;
+  border-left: 1px solid var(--border);
+  transition: background-color 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.triptych__cell:first-child {
+  border-left: 0;
+}
+.triptych__cell:hover {
+  background: var(--paper-2);
+  box-shadow: var(--lift);
+}
+
+@media (max-width: 1023px) {
+  .triptych {
+    grid-template-columns: 1fr;
+  }
+  .triptych__cell {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    padding: 36px 28px 44px;
+  }
+  .triptych__cell:first-child {
+    border-top: 0;
+  }
+}
+
+/* --- ticker ------------------------------------------------------------- */
+
+.ticker {
+  height: 48px;
+  background: var(--obsidian);
+  color: var(--on-dark);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.ticker__track {
+  display: flex;
+  flex: none;
+  white-space: nowrap;
+  will-change: transform;
+}
+.ticker__run {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+.ticker__item {
+  padding-inline: 20px;
+}
+
+/* --- nav ---------------------------------------------------------------- */
+
+.nav {
+  position: absolute;
+  top: 48px; /* clears the ticker, and scrolls away with it */
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 72px;
+  transition:
+    background-color 240ms cubic-bezier(0.16, 0.84, 0.28, 1),
+    border-color 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+  border-bottom: 1px solid transparent;
+}
+/* Over the hero the bar is invisible and inherits the dark band's neutrals;
+   past it the bar becomes paper with a hairline under it. */
+.nav[data-stuck="true"] {
+  position: fixed;
+  top: 0;
+  background: var(--paper);
+  border-bottom-color: var(--rule);
+}
+.nav__links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+/* The route links. They leave the bar below the md breakpoint rather than
+   wrapping it, and the wallet action stays. */
+.nav__group {
+  display: none;
+  align-items: center;
+  gap: 28px;
+}
+@media (min-width: 768px) {
+  .nav__group {
+    display: flex;
+  }
+}
+.nav__link {
+  position: relative;
+  font-size: 14px;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.nav__link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.nav__link:hover {
+  color: var(--ink);
+}
+.nav__link:hover::after {
+  transform: scaleX(1);
+}
+/* The nav logo comes apart a pixel on hover. A small tell that the thing is
+   two pieces. */
+.nav__logo:hover .mark__half--a {
+  transform: translateY(-1px);
+}
+.nav__logo:hover .mark__half--b {
+  transform: translateY(1px);
+}
+
+/* --- hero --------------------------------------------------------------- */
+
+.hero {
+  position: relative;
+  min-height: 88vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-block: 140px 96px;
+}
+.hero__mark {
+  position: absolute;
+  /* Lifted clear of the fact rail and the scroll cue, into the empty band to
+     the right of the headline. Decorative, low contrast, and over nothing. */
+  right: clamp(16px, 3vw, 56px);
+  bottom: 170px;
+  opacity: 0.16;
+  pointer-events: none;
+  user-select: none;
+}
+.hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+@media (max-width: 1023px) {
+  .hero__grid {
+    grid-template-columns: 1fr;
+    gap: 64px;
+  }
+  .hero__mark {
+    display: none;
+  }
+}
+
+/* --- line masks --------------------------------------------------------- */
+
+/* SplitText wraps each line in one of these. Overflow is the mask; the line
+   inside is what translates. */
+.line-mask {
+  overflow: hidden;
+  display: block;
+}
+
+/* Hidden before the choreography takes over, and only when the client has
+   confirmed it will actually animate. With JS off, or under reduced motion,
+   the server HTML is simply visible. */
+.choreographed .paper-root [data-reveal] {
+  opacity: 0;
+}
+
+/* --- terminal ----------------------------------------------------------- */
+
+.term {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  min-height: 420px;
+}
+.term__col {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  min-width: 0;
+}
+.term__col:first-child {
+  border-left: 0;
+}
+.term__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 44px;
+  padding-inline: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.term__body {
+  padding: 20px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.term__label {
+  color: var(--ink-3);
+}
+.term__refuse {
+  color: var(--refuse);
+}
+.term__permit {
+  color: var(--permit);
+}
+/* The caret only exists while something is being typed. */
+.term__caret::after {
+  content: "▌";
+  margin-left: 1px;
+  animation: term-blink 1s steps(2) infinite;
+}
+@keyframes term-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.pill {
+  height: 32px;
+  padding-inline: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    border-color 240ms cubic-bezier(0.16, 0.84, 0.28, 1),
+    color 240ms cubic-bezier(0.16, 0.84, 0.28, 1),
+    transform 240ms cubic-bezier(0.16, 0.84, 0.28, 1);
+}
+.pill:hover,
+.pill[data-active="true"] {
+  border-color: var(--ink);
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+.term__input {
+  flex: 1;
+  height: 44px;
+  min-width: 0;
+  padding-inline: 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.term__input::placeholder {
+  color: var(--ink-3);
+}
+@media (max-width: 1023px) {
+  .term {
+    grid-template-columns: 1fr;
+  }
+  .term__col {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .term__col:first-child {
+    border-top: 0;
+  }
+}
+
+/* --- the stamp ---------------------------------------------------------- */
+
+.stamp {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+}
+
+/* --- cursor ------------------------------------------------------------- */
+
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 90;
+  pointer-events: none;
+  border-radius: 50%;
+  mix-blend-mode: normal;
+  will-change: transform;
+}
+.cursor-dot {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  background: var(--ink);
+}
+.cursor-ring {
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border: 1px solid var(--ink);
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+/* Over an obsidian band the cursor inverts, so it is never a dark dot on a
+   dark ground. */
+.cursor-dot[data-invert="true"] {
+  background: var(--on-dark);
+}
+.cursor-ring[data-invert="true"] {
+  border-color: var(--on-dark);
+  color: var(--on-dark);
+}
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .cursor-dot,
+  .cursor-ring {
+    display: none;
+  }
+}
+
+/* --- preloader ---------------------------------------------------------- */
+
+.preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--obsidian);
+  color: var(--on-dark);
+}
+
+/* --- reduced motion ------------------------------------------------------ */
+
+/* Not a faster animation — no animation. Every GSAP timeline is built inside
+   matchMedia under no-preference, so this only catches CSS. */
+@media (prefers-reduced-motion: reduce) {
+  .paper-root *,
+  .paper-root *::before,
+  .paper-root *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* --- small screens ------------------------------------------------------- */
+
+@media (max-width: 767px) {
+  .paper-root {
+    font-size: 15px;
+  }
+  .section {
+    padding-top: 64px;
+    padding-bottom: 72px;
+  }
+  .section__eyebrow + * {
+    margin-top: 28px;
+  }
+  .section__head + * {
+    margin-top: 48px;
+  }
+  .panel__bar {
+    height: 40px;
+  }
+}
+
+/* The bar over the hero borrows the dark band's neutrals but not its fill —
+   the hero is already obsidian, and a filled bar would carry that colour a few
+   pixels onto the paper on the way past. */
+.nav.on-obsidian {
+  background: transparent;
+}
+.nav .btn {
+  height: 40px;
+  padding-inline: 18px;
+  font-size: 14px;
+}
+
+/* The overlay is server-rendered so there is never a frame of hero before it
+   arrives, and hidden until a blocking script says this load has earned one.
+   With scripts off, or under reduced motion, the attribute is never set and
+   this stays display:none — the page is simply the page. */
+.preloader {
+  display: none;
+}
+html[data-preload="1"] .preloader {
+  display: grid;
+}
+
+/* --- hero rail ---------------------------------------------------------- */
+
+/**
+ * The band is 88vh, and the argument only needs the top of it. Rather than
+ * leave the lower half empty, the hero closes on a rail of instrument facts —
+ * the nordstern move: infrastructure earns trust with hard numbers, and these
+ * are the real ones out of deployments.json.
+ */
+.hero {
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 96px;
+}
+.hero__rail {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  border-top: 1px solid var(--rule-dark);
+  padding-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 64px;
+}
+.hero__fact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.hero__fact dt {
+  color: var(--on-dark-2);
+}
+.hero__fact dd {
+  margin: 0;
+  color: var(--on-dark);
+  overflow-wrap: anywhere;
+}
+/* Pushed to the far end of the rail: the one thing on it that is an
+   instruction rather than a fact. */
+.hero__scroll {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--on-dark-2);
+}
+.hero__scroll span[aria-hidden] {
+  display: inline-block;
+  animation: hero-nudge 2.4s ease-in-out infinite;
+}
+@keyframes hero-nudge {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+@media (max-width: 767px) {
+  .hero {
+    gap: 56px;
+  }
+  .hero__rail {
+    gap: 20px 32px;
+  }
+  .hero__scroll {
+    display: none;
+  }
+}

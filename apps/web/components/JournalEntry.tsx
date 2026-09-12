@@ -2,48 +2,64 @@
 
 import { useState } from "react";
 import type { JournalRow, ReceiptBody, BreachBody } from "@/lib/types";
-import { hashscanTopicMessage } from "@/lib/data";
+import { hashscanTopicMessage, hashscanTx } from "@/lib/data";
+import { fmtUtc, isConsoleRow } from "@/lib/format";
+import { DataPair } from "@/components/ui/DataPair";
+import { ExternalLink } from "@/components/ui/ExternalLink";
+import { SeqRail } from "@/components/ui/SeqRail";
+import { Tag, type TagTone } from "@/components/ui/Tag";
+import type { RuleWeight } from "@/components/ui/Rule";
 
-function fmtTs(unixSeconds: number): string {
-  const d = new Date(unixSeconds * 1000);
-  return d.toISOString().replace("T", " ").replace(/\.\d+Z$/, "") + " UTC";
-}
-
-function tag(row: JournalRow): { label: string; className: string } {
-  if (row.type === "BREACH")
-    return { label: "breach", className: "text-oxblood border-oxblood" };
+function verdict(row: JournalRow): {
+  label: string;
+  tone: TagTone;
+  weight: RuleWeight;
+} {
+  if (row.type === "BREACH") {
+    return { label: "breach", tone: "breach", weight: "refusal" };
+  }
   const decision = (row.body as ReceiptBody).decision;
   return decision === "APPROVED"
-    ? { label: "approved", className: "text-brass border-brass" }
-    : { label: "refused", className: "text-oxblood border-oxblood" };
+    ? { label: "approved", tone: "approved", weight: "covenant" }
+    : { label: "refused", tone: "refused", weight: "refusal" };
 }
 
+/** The one fact about this row worth reading before you open it. */
 function detailLine(row: JournalRow): string {
   if (row.type === "BREACH") {
     const b = row.body as BreachBody;
-    return `${b.covenant} · tx ${b.observedTxHash.slice(0, 10)}…`;
+    return `${b.covenant}, observed in transaction ${b.observedTxHash.slice(0, 10)}…`;
   }
   const b = row.body as ReceiptBody;
   if (b.decision === "APPROVED" && b.signature) {
-    return `sig ${b.signature.slice(0, 14)}… · nonce ${b.seq ?? "—"}`;
+    return `signature ${b.signature.slice(0, 14)}…, nonce ${b.seq ?? "—"}`;
   }
-  return `paramsHash ${(b.paramsHash ?? "0x").slice(0, 14)}… · nonce ${b.seq ?? "—"}`;
+  return `params ${(b.paramsHash ?? "0x").slice(0, 14)}…, nonce ${b.seq ?? "—"}`;
 }
 
-function Field({ k, v }: { k: string; v?: string | number | boolean }) {
-  if (v === undefined || v === null || v === "") return null;
+function Chevron({ open }: { open: boolean }) {
   return (
-    <>
-      <dt className="text-slate">{k}</dt>
-      <dd className="text-signal break-all">{String(v)}</dd>
-    </>
+    <svg
+      aria-hidden
+      viewBox="0 0 12 12"
+      width="11"
+      height="11"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+    >
+      <path d="M2.5 4.5L6 8l3.5-3.5" />
+    </svg>
   );
 }
 
 /**
  * One journal row. Used unchanged by /blocked and /journal — do not fork.
- * Click the row to expand full hashes, the receipt, and the proposal params.
- * A refused/breach row with an attached CONTEXT renders the callout.
+ *
+ * The sequence number lives in the rail on the left, and the rail segment takes
+ * the row's verdict as a rule weight, so a column of refusals is visible down
+ * the gutter before a word of it has been read.
  */
 export function JournalEntry({
   row,
@@ -55,107 +71,113 @@ export function JournalEntry({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const t = tag(row);
+  const v = verdict(row);
   const body = row.body as ReceiptBody & BreachBody;
   const reason = row.type === "BREACH" ? body.detail : body.reason;
-  const showCallout =
-    !!row.context && (t.label === "refused" || t.label === "breach");
+  const showCallout = !!row.context && v.label !== "approved";
+  // A console row carries a local counter, not a consensus sequence. The rail
+  // shows an em dash rather than a number that looks like Hedera's and is not.
+  const offJournal = isConsoleRow(body);
 
   return (
-    <article className="py-6">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="group w-full text-left"
-      >
-        <div className="flex items-baseline justify-between gap-4">
-          <div className="flex items-baseline gap-3">
-            <span className="font-mono text-xs text-slate tabular-nums">
-              #{row.seq}
-            </span>
-            <span
-              className={`font-sans text-[11px] uppercase tracking-wider border px-1.5 py-0.5 ${t.className}`}
-            >
-              {t.label}
-            </span>
-          </div>
-          <time className="font-mono text-xs text-slate">{fmtTs(row.ts)}</time>
+    <SeqRail
+      seq={offJournal ? null : row.seq}
+      weight={v.weight}
+      className="py-7"
+    >
+      <article>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+          <Tag tone={v.tone}>{v.label}</Tag>
+          <time className="data text-micro text-slate-lit">{fmtUtc(row.ts)}</time>
         </div>
 
-        <p className="mt-3 font-serif text-[17px] leading-snug text-signal group-hover:text-brass transition-colors">
+        <p className="mt-4 break-words font-serif text-[1.1875rem] leading-[1.45] text-signal">
           {reason}
         </p>
 
-        <div className="mt-2 flex items-baseline justify-between gap-4">
-          <span className="font-mono text-xs text-slate break-all">
-            {detailLine(row)}
-          </span>
-          <span className="font-mono text-xs text-slate whitespace-nowrap">
-            {open ? "details ▲" : "details ▼"}
-          </span>
-        </div>
-      </button>
+        <p className="data mt-3 break-all text-data text-slate-lit">
+          {detailLine(row)}
+        </p>
 
-      {open && (
-        <dl className="mt-4 grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5 font-mono text-xs border-l border-hairline pl-4">
-          <Field k="vault" v={row.vault} />
-          <Field k="nonce" v={body.seq ?? body.nonce} />
-          {row.type === "RECEIPT" && (
-            <>
-              <Field k="decision" v={body.decision} />
-              <Field k="mandateHash" v={body.mandateHash} />
-              <Field k="poolId" v={body.poolId} />
-              <Field k="paramsHash" v={body.paramsHash} />
-              <Field k="signature" v={body.signature} />
-              <Field k="source" v={body.source} />
-            </>
-          )}
-          {row.type === "BREACH" && (
-            <>
-              <Field k="covenant" v={body.covenant} />
-              <Field k="tx" v={body.observedTxHash} />
-            </>
-          )}
-          <Field k="consensus" v={fmtTs(row.ts)} />
-          <dt className="text-slate">HashScan</dt>
-          <dd>
-            <a
-              href={hashscanTopicMessage(topicId, row.seq)}
-              target="_blank"
-              rel="noreferrer"
-              className="text-brass hover:underline"
-            >
-              topic message #{row.seq} ↗
-            </a>
-          </dd>
-        </dl>
-      )}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="mt-4 inline-flex items-center gap-2 font-sans text-data text-slate-lit transition-colors hover:text-signal"
+        >
+          <Chevron open={open} />
+          {open ? "Hide the full receipt" : "Show the full receipt"}
+        </button>
 
-      {showCallout && row.context && (
-        <div className="mt-4 border-l-2 border-oxblood pl-4">
-          <div className="font-mono text-[11px] uppercase tracking-wider text-oxblood">
-            context the model saw
-            {row.context.injected && (
-              <span className="ml-2 border border-oxblood px-1.5 py-0.5">
-                injection
+        {open && (
+          <dl className="mt-5 grid grid-cols-[7.5rem_1fr] gap-x-5 gap-y-2 border-l border-hairline pl-5">
+            <DataPair label="vault" value={row.vault} />
+            <DataPair label="nonce" value={body.seq ?? body.nonce} />
+            {row.type === "RECEIPT" && (
+              <>
+                <DataPair label="decision" value={body.decision} />
+                <DataPair label="mandate" value={body.mandateHash} />
+                <DataPair label="pool" value={body.poolId} />
+                <DataPair label="params" value={body.paramsHash} />
+                <DataPair label="signature" value={body.signature} tone="brass" />
+                <DataPair label="source" value={body.source} />
+              </>
+            )}
+            {row.type === "BREACH" && (
+              <>
+                <DataPair label="covenant" value={body.covenant} tone="refusal" />
+                <dt className="font-sans text-data text-slate-lit">
+                  transaction
+                </dt>
+                <dd className="data break-all text-data">
+                  <ExternalLink href={hashscanTx(body.observedTxHash)}>
+                    {body.observedTxHash}
+                  </ExternalLink>
+                </dd>
+              </>
+            )}
+            <DataPair label="consensus" value={fmtUtc(row.ts)} />
+            <dt className="font-sans text-data text-slate-lit">record</dt>
+            <dd className="text-data">
+              {offJournal ? (
+                <span className="font-sans text-slate-lit">
+                  not on the journal — the Validator answered, but only the
+                  Manager appends to the topic
+                </span>
+              ) : (
+                <span className="data text-brass">
+                  <ExternalLink href={hashscanTopicMessage(topicId, row.seq)}>
+                    topic message {row.seq} on HashScan
+                  </ExternalLink>
+                </span>
+              )}
+            </dd>
+          </dl>
+        )}
+
+        {showCallout && row.context && (
+          <div className="mt-6 border-l-2 border-oxblood-edge pl-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-sans text-data text-oxblood-lit">
+                What the model saw
               </span>
+              {row.context.injected && <Tag tone="injection">injection</Tag>}
+            </div>
+            <p className="mt-3 break-words font-serif text-[1.0625rem] italic leading-relaxed text-slate-lit">
+              &ldquo;{row.context.reasoning}&rdquo;
+            </p>
+            <p className="mt-2 font-sans text-micro text-slate-lit">
+              Proposed by {row.context.proposer}, and dropped at the boundary.
+              The Validator was never sent it.
+            </p>
+            {open && (
+              <p className="data mt-3 break-all text-micro text-slate-lit">
+                {JSON.stringify(row.context.swapParams)}
+              </p>
             )}
           </div>
-          <p className="mt-2 font-serif italic text-[15px] leading-relaxed text-slate">
-            “{row.context.reasoning}”
-          </p>
-          <div className="mt-1 font-mono text-[11px] text-slate">
-            {row.context.proposer} · dropped at the boundary, never sent to the
-            Validator
-          </div>
-          {open && (
-            <div className="mt-2 font-mono text-[11px] text-slate break-all">
-              proposed: {JSON.stringify(row.context.swapParams)}
-            </div>
-          )}
-        </div>
-      )}
-    </article>
+        )}
+      </article>
+    </SeqRail>
   );
 }

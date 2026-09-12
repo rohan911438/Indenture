@@ -2,41 +2,214 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Frozen tokens — shared-contracts/design-tokens.md */
+/**
+ * Tokens — shared-contracts/design-tokens.md
+ *
+ * The frozen four (ink, bone, brass, oxblood) are unchanged. What is new is
+ * depth: each of them now has the variants the surfaces actually need, and
+ * the split is by JOB, not by taste.
+ *
+ * The reason is contrast. `--oxblood` measures 1.73:1 on `--ink` and `--slate`
+ * measures 2.42:1 — so the refusal colour, the most important signal on the
+ * site, was effectively invisible as text. Fills and rules keep the deep
+ * values; text gets a lit variant that clears 4.5:1.
+ *
+ * The palette inverts across the bone band: dark surfaces want the lit
+ * variants, the printed-stock surface wants the deep ones.
+ */
 :root {
-  --ink: #14181d;
-  --ink-raised: #1b2027;
-  --bone: #e8e3d3;
-  --brass: #a6863c;
-  --oxblood: #6b2737;
-  --slate: #4a5560;
-  --signal: #f5f2ea;
-  --hairline: rgba(245, 242, 234, 0.12);
+  /* --- ground ---------------------------------------------------------- */
+  --ink: #14181d; /* base */
+  --ink-deep: #0b0e12; /* recessed: vignette, seal well, pressed insets */
+  --ink-raised: #1b2027; /* raised surfaces */
+
+  /* --- the certificate band -------------------------------------------- */
+  --bone: #e8e3d3; /* printed stock */
+  --bone-deep: #dbd5c2; /* its own shade, for ruled columns on bone */
+
+  /* --- brass: approved, healthy, engraved ------------------------------ */
+  --brass-dim: #6e5828; /* engraving shadow · secondary text ON bone  5.35:1 */
+  --brass: #a6863c; /* approved · healthy · text on ink           5.33:1 */
+  --brass-bright: #d9b66a; /* engraving highlight */
+
+  /* --- oxblood: refused, breached -------------------------------------- */
+  --oxblood: #6b2737; /* fill · seal well · refusal text ON bone    8.39:1 */
+  --oxblood-edge: #9e3a50; /* the 2px rule that means "a refusal is here" */
+  --oxblood-lit: #c8606f; /* refusal text ON ink                       4.69:1 */
+
+  /* --- neutrals -------------------------------------------------------- */
+  --slate: #4a5560; /* strokes, disabled, never body text */
+  --slate-lit: #7c8794; /* secondary text on ink                     5.03:1 */
+  --signal: #f5f2ea; /* primary text on ink                      14.9:1 */
+
+  /* --- rules. The weight says what kind of edge it is. ------------------ */
+  --hairline: rgba(245, 242, 234, 0.12); /* row separation */
+  --hairline-bone: rgba(20, 24, 29, 0.15); /* the same, on bone */
+
+  /* --- measure ---------------------------------------------------------- */
+  --measure: 68ch;
+
   color-scheme: dark;
+}
+
+html {
+  /* The pinned sections drive their own scroll; let the browser do none of it. */
+  scroll-behavior: auto;
 }
 
 body {
   background: var(--ink);
   color: var(--signal);
   font-family: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Pinned ScrollTrigger sections measure wrong if the page can scroll sideways. */
+  overflow-x: hidden;
 }
 
-/* Numerals in the mandate sentence — italic brass, the one flourish */
-.numeral {
+/**
+ * Intaglio grain. Real certificate stock is not flat, and a single flat #14181D
+ * across 3000px of scroll is the thing that makes a dark page look like a text
+ * file. One fixed overlay, far below the threshold of noticing — you should
+ * only see it if you go looking.
+ *
+ * It hangs off the instrument wrapper rather than the body, because the paper
+ * landing wants no grain at all and a body-level overlay would follow it there.
+ */
+.instrument-ground::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Everything else sits above the grain. */
+.instrument-ground > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- type -------------------------------------------------------------- */
+
+/**
+ * Newsreader's italic is where its personality lives. It is the display face,
+ * not a one-word flourish.
+ */
+.display {
   font-family: var(--font-newsreader), "Newsreader", Georgia, serif;
   font-style: italic;
-  color: var(--brass);
-  font-weight: 500;
+  font-weight: 400;
+  /* Sized against the 7-column measure it is actually set in, not the full
+     page width — at 112px this wrapped to five lines and buried the lede. */
+  font-size: clamp(2.5rem, 5.4vw, 4.75rem);
+  line-height: 1.0;
+  letter-spacing: -0.02em;
+}
+
+.heading {
+  font-family: var(--font-newsreader), "Newsreader", Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
+.subheading {
+  font-family: var(--font-newsreader), "Newsreader", Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(1.375rem, 2.4vw, 1.75rem);
+  line-height: 1.2;
+}
+
+.lede {
+  font-size: 1.25rem;
+  line-height: 1.55;
+  max-width: var(--measure);
+}
+
+.prose-measure {
+  max-width: var(--measure);
+}
+
+/* Mono is for data. Tabular always — a column of figures that shifts is a bug. */
+.data {
+  font-family: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* --- ornament ---------------------------------------------------------- */
+
+/**
+ * The engraved-relief trick, used on the display type and the seal ring: a
+ * dark edge below, a light edge above. Intaglio is pressed INTO the stock, so
+ * the highlight sits on the upper lip.
+ */
+.relief {
+  text-shadow:
+    0 1px 0 var(--ink-deep),
+    0 -1px 0 rgba(217, 182, 106, 0.22);
+}
+
+/* A recessed well — the seal sits in one, like a blind-embossed certificate. */
+.well {
+  background: radial-gradient(
+    120% 120% at 50% 30%,
+    var(--ink) 0%,
+    var(--ink-deep) 70%
+  );
+  box-shadow: inset 0 1px 0 rgba(245, 242, 234, 0.05);
+}
+
+/* The bone band is printed stock: it inverts the whole palette. */
+.on-bone {
+  background: var(--bone);
+  color: var(--ink);
+}
+
+/**
+ * Ruled ledger stock. Deliberately fainter than the hairlines that separate
+ * content: this is the texture of the paper, not a rule doing a job, and it
+ * must never be mistaken for a baseline grid the text is failing to sit on.
+ */
+.ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2.35rem,
+    rgba(20, 24, 29, 0.085) 2.35rem,
+    rgba(20, 24, 29, 0.085) calc(2.35rem + 1px)
+  );
 }
 
 a {
   color: inherit;
 }
 
+/**
+ * Links are underlined, and the underline thickens. No arrow glyph is appended
+ * to link text — an external link gets a real mark instead (components/ui/Link).
+ */
+.link {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  transition: text-decoration-color 140ms ease-out, color 140ms ease-out;
+}
+.link:hover {
+  text-decoration-thickness: 2px;
+  text-decoration-color: currentColor;
+}
+
 :focus-visible {
-  outline: 2px solid var(--brass);
-  outline-offset: 2px;
+  outline: 2px solid var(--brass-bright);
+  outline-offset: 3px;
 }
 
 ::selection {
@@ -44,10 +217,30 @@ a {
   color: var(--ink);
 }
 
-/* The single motion moment: gauge fill on load. Honour reduced-motion. */
+/* --- motion ------------------------------------------------------------ */
+
+/**
+ * Reduced motion is not a faster animation, it is no animation. Every GSAP
+ * timeline is registered inside gsap.matchMedia() under
+ * (prefers-reduced-motion: no-preference), so nothing below is a fallback for
+ * the choreography — it only catches CSS transitions.
+ */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/**
+ * Anything the choreography animates in starts hidden — but ONLY once the
+ * client has confirmed it will actually animate. The class is added by
+ * components/motion/gsap.ts, so with JS off or reduced motion set, the
+ * server-rendered HTML is fully visible.
+ */
+.choreographed [data-reveal] {
+  opacity: 0;
 }

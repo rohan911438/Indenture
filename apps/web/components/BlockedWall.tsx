@@ -6,6 +6,8 @@ import type { JournalRow } from "@/lib/types";
 import { AttackConsole } from "@/components/AttackConsole";
 import { FeaturedBlock } from "@/components/FeaturedBlock";
 import { JournalEntry } from "@/components/JournalEntry";
+import { Rule } from "@/components/ui/Rule";
+import { SeqRailHead } from "@/components/ui/SeqRail";
 
 export function BlockedWall({
   initialRows,
@@ -43,7 +45,7 @@ export function BlockedWall({
   const featuredIsFresh = extra.length > 0 && featured === extra[0];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-14">
       <AttackConsole
         scenarios={scenarios}
         onResult={onResult}
@@ -59,26 +61,36 @@ export function BlockedWall({
           />
         </div>
       ) : (
-        <p className="font-serif italic text-[16px] text-slate">
-          Nothing has been blocked yet. Fire one from the console above, or run{" "}
-          <span className="font-mono not-italic">npm run inject</span> against
-          the Validator.
-        </p>
+        <div className="border-l-2 border-hairline pl-6">
+          <p className="prose-measure font-serif text-[1.25rem] italic leading-relaxed text-slate-lit">
+            Nothing has been blocked yet, which is the honest state of a fund
+            whose manager has not yet tried anything it should not.
+          </p>
+          <p className="prose-measure mt-4 font-sans text-meta text-slate-lit">
+            Fire one from the console above to put the first entry on this wall,
+            or run{" "}
+            <span className="data text-signal">npm run inject</span> against the
+            Validator to do it from a terminal.
+          </p>
+        </div>
       )}
 
       {rest.length > 0 && (
         <div>
-          <div className="font-mono text-xs uppercase tracking-[0.25em] text-slate">
-            Earlier
-          </div>
-          <div className="mt-4 divide-y divide-hairline border-t border-hairline">
-            {rest.map((row) => (
-              <JournalEntry
-                key={`${row.type}-${row.seq}`}
-                row={row}
-                topicId={topicId}
-              />
-            ))}
+          <h2 className="subheading text-signal">Earlier</h2>
+          <div className="mt-8">
+            <SeqRailHead topicId={topicId} />
+            <Rule className="mt-3" />
+            <div className="divide-y divide-hairline">
+              {rest.map((row) => (
+                <JournalEntry
+                  key={`${row.type}-${row.seq}`}
+                  row={row}
+                  topicId={topicId}
+                />
+              ))}
+            </div>
+            <Rule />
           </div>
         </div>
       )}

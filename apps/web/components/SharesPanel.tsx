@@ -2,117 +2,172 @@
 
 import { useState } from "react";
 import type { SharesState } from "@/lib/data";
-import { useWallet } from "@/components/wallet/WalletProvider";
+import { FUND_CHAIN, useWallet } from "@/components/wallet/WalletProvider";
+import { Rule } from "@/components/ui/Rule";
+import { Tag } from "@/components/ui/Tag";
 
 /**
  * /shares is about showing WHY a subscription is refused, not just that it is.
- * Connection state is the global WalletProvider (the header button). This panel
- * only reads it and drives the subscribe / redeem form.
+ *
+ * There are two separate things on this panel and they must not blur: the real
+ * wallet you connected, and a sample identity you can preview. The registry the
+ * compliance contract consults is not deployed yet, so for a real address there
+ * is genuinely nothing to ask — and the honest answer to "will this class accept
+ * me" is that it cannot be decided, not a green tick. The preview exists so the
+ * refusal reasons the contract WOULD give are still demonstrable.
  */
 export function SharesPanel({ state }: { state: SharesState }) {
-  const { connection, blockedReason, openModal, switchIdentity, identities } =
-    useWallet();
+  const {
+    address,
+    isConnected,
+    connectorName,
+    wrongChain,
+    switchToFundChain,
+    openModal,
+    identities,
+    registryLive,
+    liveIdentity,
+    preview,
+    setPreview,
+    blockedReason,
+    undecidable,
+  } = useWallet();
+
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState<string | null>(null);
 
-  const canTransact = !!connection && !blockedReason;
+  const subject = liveIdentity ?? preview;
+  const canTransact = !!subject && !blockedReason && !wrongChain;
 
   return (
-    <div className="space-y-8">
-      {/* --- connection --- */}
+    <div className="grid grid-cols-1 gap-x-16 gap-y-14 lg:grid-cols-2">
+      {/* --- connection ------------------------------------------------- */}
       <section>
-        <div className="font-mono text-xs uppercase tracking-[0.25em] text-slate">
-          Wallet
-        </div>
+        <h2 className="subheading text-signal">Who is asking</h2>
 
-        {!connection ? (
-          <div className="mt-3 flex items-center gap-3">
+        {!isConnected ? (
+          <div className="mt-6">
             <button
               onClick={openModal}
-              className="border border-brass px-3 py-1.5 font-sans text-sm text-brass hover:bg-brass hover:text-ink transition-colors"
+              className="border border-brass px-4 py-2 font-sans text-meta text-brass transition-colors duration-150 hover:bg-brass hover:text-ink"
             >
-              Connect wallet
+              Connect a wallet
             </button>
-            <span className="font-sans text-sm text-slate">
-              or use the button in the header
-            </span>
+            <p className="prose-measure mt-4 font-sans text-data text-slate-lit">
+              This opens your real wallet extension and asks it for{" "}
+              {FUND_CHAIN.name}. Nothing is signed by connecting.
+            </p>
           </div>
         ) : (
-          <div className="mt-3 space-y-3">
-            <div className="flex items-baseline justify-between gap-4">
-              <div className="font-mono text-xs text-slate break-all">
-                {connection.wallet.name} · {connection.identity.address}
-                <span
-                  className={
-                    connection.identity.identityVerified
-                      ? "text-brass"
-                      : "text-oxblood"
-                  }
-                >
-                  {" "}
-                  ·{" "}
-                  {connection.identity.identityVerified
-                    ? "verified"
-                    : "not verified"}
-                </span>
+          <div className="mt-6 space-y-5">
+            <div>
+              <p className="font-sans text-meta text-signal">{connectorName}</p>
+              <p className="data mt-1 break-all text-data text-slate-lit">
+                {address}
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                {wrongChain ? (
+                  <>
+                    <Tag tone="refused">wrong network</Tag>
+                    <button
+                      onClick={switchToFundChain}
+                      className="link font-sans text-data text-brass"
+                    >
+                      Switch to {FUND_CHAIN.name}
+                    </button>
+                  </>
+                ) : (
+                  <Tag tone="approved">on {FUND_CHAIN.name}</Tag>
+                )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {identities.map((id) => {
-                const active =
-                  id.address === connection.identity.address;
-                return (
-                  <button
-                    key={id.address}
-                    onClick={() => {
-                      switchIdentity(id.address);
-                      setNote(null);
-                    }}
-                    className={
-                      "border px-2.5 py-1 font-mono text-[11px] transition-colors " +
-                      (active
-                        ? "border-brass text-signal"
-                        : "border-hairline text-slate hover:text-signal")
-                    }
-                  >
-                    {id.label}
-                  </button>
-                );
-              })}
-            </div>
+
+            {undecidable && (
+              <div className="border-l-2 border-slate pl-5">
+                <p className="font-sans text-data text-slate-lit">
+                  This address cannot be checked
+                </p>
+                <p className="prose-measure mt-2 font-sans text-data text-slate-lit">
+                  The IdentityRegistry this class consults is not deployed yet,
+                  so there is no registry to ask about your wallet. Preview one
+                  of the sample identities below to see the exact reasons the
+                  compliance contract gives.
+                </p>
+              </div>
+            )}
           </div>
         )}
+
+        {/* --- the sample identities, clearly labelled as a preview ------ */}
+        <div className="mt-8">
+          <p className="font-sans text-micro text-slate">
+            {registryLive
+              ? "Or check the class against another registered identity"
+              : "Preview a sample identity"}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {identities.map((id) => {
+              const active = preview?.address === id.address;
+              return (
+                <button
+                  key={id.address}
+                  onClick={() => {
+                    setPreview(active ? null : id.address);
+                    setNote(null);
+                  }}
+                  aria-pressed={active}
+                  className={
+                    "border px-3 py-1.5 font-sans text-data transition-colors duration-150 " +
+                    (active
+                      ? "border-brass text-signal"
+                      : "border-hairline text-slate-lit hover:border-slate hover:text-signal")
+                  }
+                >
+                  {id.label}
+                </button>
+              );
+            })}
+          </div>
+          {preview && !registryLive && (
+            <p className="prose-measure mt-3 font-sans text-micro text-oxblood-lit">
+              Previewing sample data, not your wallet. These identities come from
+              fixtures because no registry is deployed.
+            </p>
+          )}
+        </div>
       </section>
 
-      {/* --- subscribe / redeem --- */}
+      {/* --- subscribe / redeem ----------------------------------------- */}
       <section>
-        <div className="font-mono text-xs uppercase tracking-[0.25em] text-slate">
-          Subscribe / redeem
-        </div>
+        <h2 className="subheading text-signal">Subscribe or redeem</h2>
 
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <label className="sr-only" htmlFor="share-amount">
+            Number of shares
+          </label>
           <input
+            id="share-amount"
             inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
             disabled={!canTransact}
-            className="w-40 bg-transparent border border-hairline px-3 py-2 font-mono text-sm text-signal placeholder:text-slate disabled:opacity-40"
+            className="data w-44 border border-hairline bg-transparent px-3 py-2 text-data text-signal placeholder:text-slate focus:border-brass disabled:opacity-40"
           />
-          <span className="font-mono text-xs text-slate">
+          <span className="font-sans text-data text-slate-lit">
             {state.shareClass.name}
           </span>
         </div>
 
-        <div className="mt-3 flex gap-3">
+        <div className="mt-5 flex flex-wrap gap-3">
           <button
             disabled={!canTransact}
             onClick={() =>
               setNote(
-                `Would call SecurityToken.mint for ${amount || "0"} shares (contracts not live).`,
+                `Would call SecurityToken.mint for ${amount || "0"} shares. The token is not deployed, so nothing was sent.`,
               )
             }
-            className="border border-brass text-brass px-4 py-2 font-sans text-sm disabled:opacity-30 disabled:border-hairline disabled:text-slate"
+            className="border border-brass px-4 py-2 font-sans text-meta text-brass transition-colors duration-150 hover:bg-brass hover:text-ink disabled:border-hairline disabled:bg-transparent disabled:text-slate disabled:hover:bg-transparent"
           >
             Subscribe
           </button>
@@ -120,49 +175,55 @@ export function SharesPanel({ state }: { state: SharesState }) {
             disabled={!canTransact}
             onClick={() =>
               setNote(
-                `Would call SecurityToken.redeem for ${amount || "0"} shares (contracts not live).`,
+                `Would call SecurityToken.redeem for ${amount || "0"} shares. The token is not deployed, so nothing was sent.`,
               )
             }
-            className="border border-hairline text-slate px-4 py-2 font-sans text-sm hover:text-signal disabled:opacity-30"
+            className="border border-hairline px-4 py-2 font-sans text-meta text-slate-lit transition-colors duration-150 hover:text-signal disabled:text-slate"
           >
             Redeem
           </button>
         </div>
 
-        {!connection && (
-          <p className="mt-4 font-serif italic text-[15px] text-slate">
-            Connect a wallet to see whether this share class will accept you.
+        {!subject && (
+          <p className="prose-measure mt-7 font-serif text-[1.0625rem] italic leading-relaxed text-slate-lit">
+            {isConnected
+              ? "Pick an identity above to see whether this share class would accept it, and the exact reason if it would not."
+              : "Connect a wallet, or preview a sample identity, to see whether this share class will accept you."}
           </p>
         )}
 
         {blockedReason && (
-          <div className="mt-4 border-l-2 border-oxblood pl-4">
-            <div className="font-mono text-[11px] uppercase tracking-wider text-oxblood">
-              why this is refused
-            </div>
-            <p className="mt-2 font-serif text-[15px] leading-relaxed text-signal">
+          <div className="mt-7 border-l-2 border-oxblood-edge pl-5">
+            <Rule weight="refusal" className="mb-4 w-12" />
+            <p className="font-sans text-data text-oxblood-lit">
+              Why this is refused
+            </p>
+            <p className="prose-measure mt-3 font-serif text-[1.0625rem] leading-relaxed text-signal">
               {blockedReason}
             </p>
-            <p className="mt-1 font-mono text-[11px] text-slate">
-              The same check runs in CompliancePolicy.beforeSwap on-chain — the
-              UI is only showing you the reason early.
+            <p className="prose-measure mt-3 font-sans text-data text-slate-lit">
+              The same check runs in CompliancePolicy.beforeSwap on-chain. This
+              page is only showing you the reason early.
             </p>
           </div>
         )}
 
-        {connection && canTransact && (
-          <div className="mt-4 border-l-2 border-brass pl-4">
-            <div className="font-mono text-[11px] uppercase tracking-wider text-brass">
-              cleared to subscribe
-            </div>
-            <p className="mt-2 font-mono text-[11px] text-slate">
-              IdentityRegistry.isVerified is true and the class is open —
-              CompliancePolicy would let this transfer through.
+        {subject && canTransact && (
+          <div className="mt-7 border-l-2 border-brass pl-5">
+            <p className="font-sans text-data text-brass">Cleared to subscribe</p>
+            <p className="prose-measure mt-3 font-sans text-data text-slate-lit">
+              IdentityRegistry.isVerified is true for{" "}
+              {liveIdentity ? "this wallet" : subject.label} and the class is
+              open, so CompliancePolicy would let this transfer through.
             </p>
           </div>
         )}
 
-        {note && <p className="mt-4 font-mono text-xs text-brass">{note}</p>}
+        {note && (
+          <p className="prose-measure mt-6 font-sans text-data text-brass">
+            {note}
+          </p>
+        )}
       </section>
     </div>
   );

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wallet check — Indenture</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0 auto; padding: 2.5rem 1.5rem; background: #14181d; color: #f5f2ea;
+        font: 15px/1.6 ui-sans-serif, system-ui, sans-serif; max-width: 62rem;
+      }
+      h1 { font-size: 1.5rem; font-weight: 400; margin: 0 0 .25rem; }
+      h2 { font-size: 1rem; font-weight: 500; margin: 2rem 0 .5rem; color: #d9b66a; }
+      p.sub { color: #7c8794; margin: 0 0 2rem; }
+      pre {
+        background: #0b0e12; border-left: 2px solid #a6863c; padding: .9rem 1rem; margin: 0;
+        font: 12.5px/1.6 ui-monospace, monospace; white-space: pre-wrap; word-break: break-word;
+      }
+      button {
+        background: transparent; border: 1px solid #a6863c; color: #a6863c;
+        padding: .55rem 1rem; font: inherit; font-size: 14px; cursor: pointer;
+        margin: .25rem .5rem .25rem 0;
+      }
+      button:hover { background: #a6863c; color: #14181d; }
+      .ok { color: #a6863c; } .bad { color: #c8606f; } .dim { color: #7c8794; }
+      #copy { border-color: #4a5560; color: #7c8794; }
+    </style>
+  </head>
+  <body>
+    <h1>Wallet check</h1>
+    <p class="sub">
+      A plain HTML page with no framework, no bundler and no libraries. If a wallet
+      fails here too, the problem is the extension or the browser, not the Indenture app.
+    </p>
+
+    <h2>1. What this page can see</h2>
+    <pre id="env">reading…</pre>
+
+    <h2>2. Wallets that announced themselves (EIP-6963)</h2>
+    <pre id="announced">listening…</pre>
+
+    <h2>3. Ask a wallet to connect</h2>
+    <p class="sub" style="margin-bottom:1rem">
+      This calls <code>eth_requestAccounts</code> directly on the provider — the call
+      that makes an extension open its approval window. It gives up after 15 seconds,
+      because a request that never answers is itself the most useful result.
+    </p>
+    <div id="buttons"></div>
+    <pre id="result" style="margin-top:1rem">no attempt yet</pre>
+
+    <h2>4. Report</h2>
+    <button id="copy">Copy everything above</button>
+    <pre id="report" class="dim">—</pre>
+
+    <script>
+      var $ = function (id) { return document.getElementById(id); };
+      var providers = [];
+      var eth = window.ethereum;
+
+      // --- 1. environment -------------------------------------------------
+      var envLines = [
+        "page origin        : " + location.origin,
+        "window.ethereum    : " + (eth ? "present" : "ABSENT")
+      ];
+      if (eth) {
+        envLines.push(
+          "  .isMetaMask      : " + !!eth.isMetaMask,
+          "  .isBraveWallet   : " + !!eth.isBraveWallet,
+          "  .isRabby         : " + !!eth.isRabby,
+          "  .providers[]     : " + (Array.isArray(eth.providers)
+            ? eth.providers.length + " providers"
+            : "none (single provider)"),
+          "  ._metamask       : " + (eth._metamask ? "present" : "absent")
+        );
+        if (eth._metamask && typeof eth._metamask.isUnlocked === "function") {
+          eth._metamask.isUnlocked().then(function (u) {
+            $("env").textContent += "\n  isUnlocked()     : " + u +
+              (u ? "" : "   <-- LOCKED. Open the extension and unlock it.");
+          }).catch(function () {
+            $("env").textContent +=
+              "\n  isUnlocked()     : threw — the background worker is not answering";
+          });
+        }
+      }
+      envLines.push("user agent         : " + navigator.userAgent);
+      $("env").textContent = envLines.join("\n");
+
+      // --- 2. EIP-6963 discovery ------------------------------------------
+      window.addEventListener("eip6963:announceProvider", function (e) {
+        var d = e.detail;
+        for (var i = 0; i < providers.length; i++) {
+          if (providers[i].info.uuid === d.info.uuid) return;
+        }
+        providers.push(d);
+        render();
+      });
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+      function render() {
+        $("announced").textContent = providers.length
+          ? providers.map(function (p, i) {
+              return (i + 1) + ". " + p.info.name + "   rdns=" + p.info.rdns;
+            }).join("\n")
+          : "NONE — no wallet announced itself over EIP-6963";
+
+        var box = $("buttons");
+        box.innerHTML = "";
+        var targets = providers.map(function (p) {
+          return { label: p.info.name, provider: p.provider };
+        });
+        if (eth) targets.push({ label: "window.ethereum (raw)", provider: eth });
+        if (eth && Array.isArray(eth.providers)) {
+          eth.providers.forEach(function (p, i) {
+            targets.push({
+              label: "window.ethereum.providers[" + i + "]" +
+                (p.isMetaMask ? " (MetaMask)" : ""),
+              provider: p
+            });
+          });
+        }
+        if (!targets.length) {
+          box.innerHTML = '<span class="bad">No provider to try.</span>';
+          return;
+        }
+        targets.forEach(function (t) {
+          var b = document.createElement("button");
+          b.textContent = "Connect with " + t.label;
+          b.onclick = function () { attempt(t.label, t.provider); };
+          box.appendChild(b);
+        });
+      }
+      setTimeout(render, 600);
+
+      // --- 3. the actual request ------------------------------------------
+      var HUNG_LINES = [
+        "The extension took the request and never replied. Its inpage script is alive",
+        "(it is injected on this page) but its background service worker is not",
+        "running, so nothing can ever come back.",
+        "",
+        "Fix, in this order:",
+        "  1. Look for a wallet popup window hiding behind this one and answer it.",
+        "     A single unanswered prompt blocks every request after it.",
+        "  2. Click the extension in the toolbar to wake it, and unlock it.",
+        "  3. chrome://extensions  ->  MetaMask  ->  Reload (the circular arrow).",
+        "  4. Restart the browser."
+      ].join("\n");
+
+      function attempt(label, provider) {
+        var out = $("result");
+        var t0 = Date.now();
+        var settled = false;
+
+        var tick = setInterval(function () {
+          if (settled) return;
+          out.textContent = "calling eth_requestAccounts on " + label +
+            " … " + Math.round((Date.now() - t0) / 1000) + "s, no answer yet";
+        }, 1000);
+        out.textContent = "calling eth_requestAccounts on " + label + " … 0s";
+
+        function done() { settled = true; clearInterval(tick); }
+
+        var timer = setTimeout(function () {
+          if (settled) return;
+          done();
+          out.innerHTML = '<span class="bad">NO ANSWER — the request hung</span>\n' +
+            "wallet  : " + label + "\n\n" + HUNG_LINES;
+        }, 15000);
+
+        provider.request({ method: "eth_requestAccounts" }).then(function (accounts) {
+          if (settled) return;
+          done(); clearTimeout(timer);
+          provider.request({ method: "eth_chainId" }).catch(function () {
+            return "(not asked)";
+          }).then(function (chainId) {
+            out.innerHTML = '<span class="ok">CONNECTED in ' + (Date.now() - t0) + "ms</span>\n" +
+              "wallet   : " + label + "\n" +
+              "accounts : " + JSON.stringify(accounts) + "\n" +
+              "chainId  : " + chainId + " (" + parseInt(chainId, 16) + ")";
+          });
+        }, function (err) {
+          if (settled) return;
+          done(); clearTimeout(timer);
+          var code = err && err.code;
+          out.innerHTML = '<span class="bad">FAILED after ' + (Date.now() - t0) + "ms</span>\n" +
+            "wallet  : " + label + "\n" +
+            "code    : " + code + "\n" +
+            "message : " + (err && err.message) + "\n\n" +
+            (code === 4001
+              ? "Code 4001 means you pressed Reject. The wallet DID open — it works."
+              : HUNG_LINES);
+        });
+      }
+
+      // --- 4. copyable report ---------------------------------------------
+      $("copy").onclick = function () {
+        var text = ["ENV", $("env").textContent, "", "ANNOUNCED",
+          $("announced").textContent, "", "RESULT", $("result").textContent].join("\n");
+        $("report").textContent = text;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(function () {
+            $("report").textContent = text + "\n\n(copied to clipboard)";
+          }, function () {});
+        }
+      };
+    </script>
+  </body>
+</html>

@@ -3,8 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+/**
+ * Five routes. The prospectus is the document a fund hands someone who is
+ * deciding whether to trust it.
+ *
+ * It used to be the landing page. The landing is now its own thing in the paper
+ * system, so this points at where the prospectus actually lives rather than at
+ * a route that no longer renders it.
+ */
 const NAV = [
-  { href: "/", label: "Mandate" },
+  { href: "/prospectus", label: "Prospectus" },
+  { href: "/mandate", label: "Mandate" },
   { href: "/journal", label: "Journal" },
   { href: "/blocked", label: "Blocked" },
   { href: "/shares", label: "Shares" },
@@ -13,20 +22,19 @@ const NAV = [
 export function SiteNav() {
   const path = usePathname();
   return (
-    <nav className="flex gap-6 text-sm">
+    <nav aria-label="Sections" className="flex flex-wrap gap-x-5 gap-y-1 sm:gap-x-7">
       {NAV.map((n) => {
-        const active =
-          n.href === "/" ? path === "/" : path.startsWith(n.href);
+        const active = path.startsWith(n.href);
         return (
           <Link
             key={n.href}
             href={n.href}
             aria-current={active ? "page" : undefined}
             className={
-              "pb-1 -mb-1 border-b transition-colors " +
+              "-mb-px border-b-2 pb-1 font-sans text-meta transition-colors duration-150 " +
               (active
-                ? "text-signal border-brass"
-                : "text-slate border-transparent hover:text-signal")
+                ? "border-brass text-signal"
+                : "border-transparent text-slate-lit hover:border-hairline hover:text-signal")
             }
           >
             {n.label}

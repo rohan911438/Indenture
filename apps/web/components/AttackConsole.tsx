@@ -3,15 +3,17 @@
 import { useRef, useState } from "react";
 import type { AttackScenario } from "@/lib/data";
 import type { JournalRow } from "@/lib/types";
+import { Rule } from "@/components/ui/Rule";
+import { Tag } from "@/components/ui/Tag";
 
 const MANDATE_HASH =
   "0x5b2aa6b40d6994afed27c26457c470d6fe4fa9c47622cbe388e20e1b29b19c75";
 const VAULT = "0x00000000000000000000000000000000000000b0";
 
 const STEPS = [
-  "LlmProposer emits a proposal with attached reasoning",
-  "Free text dropped at the boundary — Validator receives only { poolId, swapParams }",
-  "Validator re-derives the mandate, pool state and price feed from source",
+  "The manager emits a proposal with its reasoning attached",
+  "The free text is dropped at the boundary — the Validator is handed only { poolId, swapParams }",
+  "The Validator re-derives the mandate, the pool state and the price feed from source",
   "__verdict__",
   "__journal__",
 ] as const;
@@ -31,6 +33,24 @@ type ValidateResponse = {
   receipt?: { seq?: number; poolId?: string; paramsHash?: string; mandateHash?: string };
   signature?: string;
 };
+
+/** pending · running · done — the mark says which, without a decorative tick. */
+function StepMark({ state }: { state: "pending" | "running" | "done" | "refused" }) {
+  const cls =
+    state === "done"
+      ? "bg-brass border-brass"
+      : state === "refused"
+        ? "bg-oxblood-edge border-oxblood-edge"
+        : state === "running"
+          ? "animate-pulse bg-slate border-slate"
+          : "border-hairline";
+  return (
+    <span
+      aria-hidden
+      className={`mt-[0.42rem] h-2 w-2 shrink-0 border ${cls}`}
+    />
+  );
+}
 
 export function AttackConsole({
   scenarios,
@@ -76,11 +96,11 @@ export function AttackConsole({
     setLiveVerdict(null);
     const gap = prefersReducedMotion() ? 120 : 650;
 
-    // Ask the Validator while the steps animate, so the verdict on screen is
+    // Ask the Validator while the steps advance, so the verdict on screen is
     // the one that came back rather than the one we expected.
     const answer: Promise<ValidateResponse | null> = live
       ? ask(s).catch((e: unknown) => {
-          setLiveVerdict(`Validator unreachable — ${(e as Error).message}`);
+          setLiveVerdict(`The Validator could not be reached — ${(e as Error).message}`);
           return null;
         })
       : Promise.resolve(null);
@@ -93,8 +113,30 @@ export function AttackConsole({
     setPhase(STEPS.length);
 
     const nonce = real?.receipt?.seq ?? 60 + runs.current;
-    const decision = real?.decision ?? "REFUSED";
-    if (real) setLiveVerdict(`${decision} — ${real.detail?.covenant ?? real.reason ?? ""}`);
+
+    /**
+     * Take the verdict WHOLE from whichever source gave it.
+     *
+     * The previous version read `decision` off the live answer but fell back to
+     * the fixture for `reason`, so a live APPROVED could be shown wearing the
+     * fixture's refusal text. A verdict assembled from two sources is not a
+     * verdict either of them gave, and this page's entire argument is that the
+     * record says what actually happened.
+     */
+    const decision = real ? real.decision : "REFUSED";
+    const reason = real
+      ? (real.reason ??
+        (real.decision === "APPROVED"
+          ? "Within every covenant — the Validator signed it."
+          : "Refused, with no reason given."))
+      : s.reason;
+    if (real) {
+      setLiveVerdict(
+        real.decision === "APPROVED"
+          ? `Approved — ${real.reason ?? "the trade itself is inside every covenant"}`
+          : `Refused — ${real.detail?.covenant ?? real.reason ?? ""}`,
+      );
+    }
 
     onResult({
       seq: 900 + runs.current,
@@ -103,7 +145,7 @@ export function AttackConsole({
       ts: Math.floor(Date.now() / 1000),
       body: {
         decision,
-        reason: real?.reason ?? s.reason,
+        reason,
         seq: nonce,
         poolId: real?.receipt?.poolId ?? s.poolId,
         mandateHash: real?.receipt?.mandateHash ?? MANDATE_HASH,
@@ -125,11 +167,9 @@ export function AttackConsole({
   }
 
   return (
-    <section className="border border-hairline p-5">
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="font-mono text-xs uppercase tracking-[0.25em] text-slate">
-          Attack console
-        </h2>
+    <section className="border border-hairline bg-ink-raised/40 p-6 sm:p-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+        <h2 className="subheading text-signal">Fire one yourself</h2>
         {phase === STEPS.length && (
           <button
             onClick={() => {
@@ -137,38 +177,45 @@ export function AttackConsole({
               setActive(null);
               setLiveVerdict(null);
             }}
-            className="font-mono text-xs text-slate hover:text-signal"
+            className="font-sans text-data text-slate-lit transition-colors hover:text-signal"
           >
-            reset
+            Clear and start again
           </button>
         )}
       </div>
-      <p className="mt-2 font-sans text-sm text-slate">
-        Fire a prompt-injection at the pipeline.{" "}
+
+      <p className="prose-measure mt-4 text-slate-lit">
         {live ? (
           <>
-            The proposal goes to the deployed Validator; only{" "}
-            <span className="font-mono text-xs">{"{ poolId, swapParams }"}</span>{" "}
-            crosses the boundary, and the verdict below is its answer.
+            The proposal goes to the deployed Validator, and only{" "}
+            <span className="data text-signal">{"{ poolId, swapParams }"}</span>{" "}
+            crosses the boundary. The verdict below is its answer, not ours.{" "}
+            <span className="text-slate-lit">
+              Whether a proposal is refused depends on the fund&rsquo;s state at
+              the moment you fire it, not on the button you pressed — the
+              stale-price one is only refused while the price feed actually is
+              stale.
+            </span>
           </>
         ) : (
-          <span className="text-oxblood">
-            No Validator is deployed yet — this is a scripted rehearsal of the
-            same sequence, not a live refusal.
+          <span className="text-oxblood-lit">
+            No Validator is deployed, so this runs the same sequence as a
+            rehearsal. It is not a live refusal, and the entry it writes below
+            will say so.
           </span>
         )}
       </p>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-7 flex flex-wrap gap-3">
         {scenarios.map((s) => (
           <button
             key={s.id}
             disabled={running}
             onClick={() => run(s)}
             className={
-              "border px-3 py-1.5 font-sans text-sm transition-colors disabled:opacity-30 " +
+              "border px-4 py-2 font-sans text-meta transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-30 " +
               (active?.id === s.id
-                ? "border-oxblood text-oxblood"
+                ? "border-oxblood-edge text-oxblood-lit"
                 : "border-hairline text-signal hover:border-slate")
             }
           >
@@ -178,46 +225,80 @@ export function AttackConsole({
       </div>
 
       {phase >= 0 && active && (
-        <ol className="mt-5 space-y-1.5">
-          {STEPS.map((raw, i) => {
-            const line =
-              raw === "__verdict__"
-                ? (liveVerdict ?? `REFUSED — ${active.covenant}`)
-                : raw === "__journal__"
-                  ? live
-                    ? "Written to the journal topic, permanently"
-                    : "Would be written to the journal topic — no topic yet"
-                  : raw;
-            const done = phase > i || phase === STEPS.length;
-            const now = phase === i;
-            const verdict = raw === "__verdict__";
-            return (
-              <li
-                key={i}
-                className={
-                  "font-mono text-xs flex gap-2 " +
-                  (done
-                    ? verdict
-                      ? "text-oxblood"
-                      : "text-signal"
-                    : now
-                      ? "text-slate animate-pulse"
-                      : "text-slate/40")
-                }
-              >
-                <span aria-hidden>{done ? "✓" : now ? "…" : "·"}</span>
-                <span>{line}</span>
-              </li>
-            );
-          })}
-        </ol>
+        <>
+          <Rule className="mt-8" />
+          <ol className="mt-6 space-y-3">
+            {STEPS.map((raw, i) => {
+              const isVerdict = raw === "__verdict__";
+              const line =
+                isVerdict
+                  ? (liveVerdict ?? `Refused — ${active.covenant}`)
+                  : raw === "__journal__"
+                    ? live
+                      ? "Written to the journal topic, permanently"
+                      : "Would be written to the journal topic — there is no topic to write to"
+                    : raw;
+              const done = phase > i || phase === STEPS.length;
+              const now = phase === i;
+              // An approval is not a refusal wearing the same colour.
+              const approved = isVerdict && /^Approved/.test(liveVerdict ?? "");
+              return (
+                <li key={i} className="flex gap-3">
+                  <StepMark
+                    state={
+                      done
+                        ? isVerdict && !approved
+                          ? "refused"
+                          : "done"
+                        : now
+                          ? "running"
+                          : "pending"
+                    }
+                  />
+                  <span
+                    className={
+                      "font-sans text-meta " +
+                      (done
+                        ? isVerdict
+                          ? approved
+                            ? "text-brass"
+                            : "text-oxblood-lit"
+                          : "text-signal"
+                        : now
+                          ? "text-slate-lit"
+                          : "text-slate")
+                    }
+                  >
+                    {line}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </>
       )}
 
       {phase === STEPS.length && (
-        <p className="mt-4 font-serif italic text-[15px] text-slate">
-          Blocked. The refusal and the exact text the model saw are on the wall
-          below.
-        </p>
+        <div className="mt-7 flex flex-wrap items-center gap-3">
+          {/^Approved/.test(liveVerdict ?? "") ? (
+            <>
+              <Tag tone="approved">signed</Tag>
+              <p className="prose-measure font-sans text-meta text-slate-lit">
+                The Validator signed this one. The injected sentence changed
+                nothing either way — it never reached the Validator, and the
+                trade underneath it was inside every covenant.
+              </p>
+            </>
+          ) : (
+            <>
+              <Tag tone="refused">blocked</Tag>
+              <p className="font-sans text-meta text-slate-lit">
+                The refusal and the exact text the model saw are on the record
+                below.
+              </p>
+            </>
+          )}
+        </div>
       )}
     </section>
   );

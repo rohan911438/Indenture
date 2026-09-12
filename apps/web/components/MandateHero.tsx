@@ -1,34 +1,28 @@
+import { SplitLines } from "@/components/motion/SplitLines";
+import { Rule } from "@/components/ui/Rule";
+import { mandateSentence } from "@/lib/format";
 import type { MandateView } from "@/lib/data";
 
-const pct = (bps: number) => `${(bps / 100).toLocaleString("en-US")}%`;
-const usd = (units6: string) =>
-  "$" + Math.round(Number(units6) / 1_000_000).toLocaleString("en-US");
-
-function Num({ children }: { children: React.ReactNode }) {
-  return <span className="numeral">{children}</span>;
-}
-
 /**
- * The mandate as a sentence, built from the compiled covenant values — the
- * numbers are the real thing, set in italic brass (the one flourish).
+ * The mandate as one sentence, built from the compiled covenant values.
+ *
+ * The numbers are no longer picked out in italic brass inside the sentence.
+ * Accenting a word or two inside a headline is decoration wearing the clothes
+ * of emphasis, and it was making four load-bearing figures harder to compare,
+ * not easier. They are set plainly here and given their own register below,
+ * where they can be tabular and measured against their live values.
  */
 export function MandateHero({ mandate }: { mandate: MandateView }) {
   return (
-    <section>
-      <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate">
-        The mandate
-      </p>
-      <h1 className="mt-4 font-serif text-[26px] leading-[1.5] text-signal">
-        Fund One may hold no more than <Num>{pct(mandate.maxPositionBps)}</Num>{" "}
-        of net assets in any single position, must keep at least{" "}
-        <Num>{pct(mandate.minCashBps)}</Num> in the quote currency, and may not
-        trade more than <Num>{usd(mandate.maxTradeNotional)}</Num> in one
-        transaction or <Num>{usd(mandate.maxDailyNotional)}</Num> in any rolling
-        24&nbsp;hours.
-      </h1>
-      <p className="mt-5 font-mono text-xs text-slate break-all">
-        indenture {mandate.mandateHash} · seq {mandate.seq}
-      </p>
-    </section>
+    <div>
+      <SplitLines
+        as="h1"
+        className="heading max-w-[22ch] text-signal"
+        stagger={0.07}
+      >
+        {mandateSentence(mandate)}
+      </SplitLines>
+      <Rule weight="covenant" className="mt-8 w-24" />
+    </div>
   );
 }

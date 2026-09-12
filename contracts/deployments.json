@@ -32,7 +32,7 @@
   },
   "services": {
     "$comment": "Where the deployed Validator answers. Empty means the attack console runs its scripted rehearsal instead of calling a live service, and says so.",
-    "validatorUrl": ""
+    "validatorUrl": "http://127.0.0.1:8787"
   },
   "hcs": {
     "mandateTopicId": "0.0.10463496",

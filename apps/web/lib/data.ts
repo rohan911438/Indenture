@@ -71,6 +71,10 @@ export const USING_MOCKS = !chainConfig() || !JOURNAL_TOPIC;
 
 const HASHSCAN = "https://hashscan.io/testnet";
 
+export function hashscanTopic(topicId: string): string {
+  return `${HASHSCAN}/topic/${topicId || "0.0.0"}`;
+}
+
 export function hashscanTopicMessage(topicId: string, seq: number): string {
   const id = topicId || "0.0.0";
   return `${HASHSCAN}/topic/${id}/message/${seq}`;
@@ -281,9 +285,21 @@ export interface AttackScenario {
   reason: string;
 }
 
-/** Named injections the demo console can fire. Mirrors apps/manager inject.ts. */
+/**
+ * Named injections the demo console can fire. Mirrors apps/manager inject.ts.
+ *
+ * The pool is re-pointed at the deployed one when there is a deployment. The
+ * fixtures carry a placeholder pool id, and firing at a pool the fund does not
+ * hold proves nothing: the Validator prices the trade against THAT pool's
+ * currencies, so a placeholder can come back APPROVED and make the console look
+ * like it disproved its own page. The manager's real injections read the pool
+ * from fund state for the same reason.
+ */
 export function getAttackScenarios(): AttackScenario[] {
-  return attackScenariosMock as AttackScenario[];
+  const pool = deployments.pool?.poolId;
+  const scenarios = attackScenariosMock as AttackScenario[];
+  if (!pool) return scenarios;
+  return scenarios.map((s) => ({ ...s, poolId: pool }));
 }
 
 export interface SharesState {
