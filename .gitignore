@@ -30,6 +30,9 @@ contracts/mandate.compiled.json
 # wrangler
 apps/validator/.wrangler/
 
+# vercel CLI project link (local machine only)
+.vercel/
+
 # journaler runtime cursor (committed position lives in the workflow, not the repo)
 apps/journaler/cursor.json
 
