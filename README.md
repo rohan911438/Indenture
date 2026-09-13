@@ -19,7 +19,8 @@ A Uniswap v4 hook that refuses two things a pool has never been able to refuse:
 ![cost](https://img.shields.io/badge/infra%20cost-%240-black)
 
 **[▶ Watch the demo video](https://drive.google.com/drive/folders/1mIEwb-AesxGchTzVGeyN_nzmKhgM2MCU)**
-· [Architecture](#architecture) · [Live attack console](#the-attack-console)
+· **[Live site](https://indenture-web.vercel.app)** · [Architecture](#architecture)
+· [Live attack console](#the-attack-console)
 · [Deployed addresses](#deployed--hedera-testnet-296) · [CI/CD](#cicd)
 
 </div>
@@ -332,6 +333,9 @@ whole `unlock`. This is prevention, not observation.
 [`contracts/deployments.json`](contracts/deployments.json) is the **single source of
 truth** for every address and topic id. Never read an address from an env var —
 deploy scripts write here, every service reads here.
+
+**Live** · Prospectus / attack console: **https://indenture-web.vercel.app** ·
+Validator: **https://indenture-validator.onrender.com** ([`/health`](https://indenture-validator.onrender.com/health))
 
 | Contract | Address |
 |---|---|
