@@ -17,6 +17,7 @@ A Uniswap v4 hook that refuses two things a pool has never been able to refuse:
 ![chain](https://img.shields.io/badge/Hedera-testnet%20296-8259ef)
 ![uniswap](https://img.shields.io/badge/Uniswap-v4%20hook-ff007a)
 ![cost](https://img.shields.io/badge/infra%20cost-%240-black)
+[![license](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
 **[▶ Watch the demo video](https://drive.google.com/drive/folders/1mIEwb-AesxGchTzVGeyN_nzmKhgM2MCU)**
 · **[Live site](https://indenture-web.vercel.app)** · [Architecture](#architecture)
